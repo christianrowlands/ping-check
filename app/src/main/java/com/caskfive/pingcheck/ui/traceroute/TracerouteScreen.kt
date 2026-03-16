@@ -49,8 +49,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -68,18 +67,14 @@ fun TracerouteScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val focusRequester = remember { FocusRequester() }
+
     var hasInteracted by remember { mutableStateOf(false) }
 
-    // Auto-focus the target text field
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
 
     // Validation state
     val isValidationError = hasInteracted &&
-        state.targetHost.isNotEmpty() &&
-        !InputValidator.isValidHost(state.targetHost)
+            state.targetHost.isNotEmpty() &&
+            !InputValidator.isValidHost(state.targetHost)
 
     Column(
         modifier = Modifier
@@ -94,8 +89,7 @@ fun TracerouteScreen(
                 viewModel.onTargetHostChanged(it)
             },
             modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester),
+                .fillMaxWidth(),
             label = { Text("Host or IP address") },
             placeholder = { Text("8.8.8.8 or google.com") },
             singleLine = true,

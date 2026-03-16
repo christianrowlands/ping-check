@@ -44,15 +44,14 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
@@ -72,18 +71,14 @@ fun PingScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
-    val focusRequester = remember { FocusRequester() }
+
     var hasInteracted by remember { mutableStateOf(false) }
 
-    // Auto-focus the target text field
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
 
     // Validation state
     val isValidationError = hasInteracted &&
-        state.targetHost.isNotEmpty() &&
-        !InputValidator.isValidHost(state.targetHost)
+            state.targetHost.isNotEmpty() &&
+            !InputValidator.isValidHost(state.targetHost)
 
     Column(
         modifier = Modifier
@@ -100,8 +95,7 @@ fun PingScreen(
                 viewModel.onTargetHostChanged(it)
             },
             modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focusRequester),
+                .fillMaxWidth(),
             label = { Text("Host or IP address") },
             placeholder = { Text("8.8.8.8 or google.com") },
             singleLine = true,
@@ -446,6 +440,7 @@ private fun ErrorCard(error: PingError, onRetry: () -> Unit) {
                         Text("Open Network Settings")
                     }
                 }
+
                 is PingError.DnsFailure -> {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -454,6 +449,7 @@ private fun ErrorCard(error: PingError, onRetry: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+
                 is PingError.NoPingBinary -> {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
@@ -462,6 +458,7 @@ private fun ErrorCard(error: PingError, onRetry: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
+
                 is PingError.General -> {
                     // No additional guidance for general errors
                 }
