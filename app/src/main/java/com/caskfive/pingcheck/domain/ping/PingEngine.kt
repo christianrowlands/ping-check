@@ -18,7 +18,7 @@ class PingEngine @Inject constructor(
 ) {
     companion object {
         private val PING_REPLY_REGEX = Regex(
-            """(\d+)\s+bytes\s+from\s+([^:]+):\s+icmp_seq=(\d+)\s+ttl=(\d+)\s+time=(\d+\.?\d*)\s*ms"""
+            """(\d+)\s+bytes\s+from\s+(.+?):\s+icmp_seq=(\d+)\s+ttl=(\d+)\s+time=(\d+\.?\d*)\s*ms"""
         )
         private val PING_STARTED_REGEX = Regex(
             """PING\s+\S+\s+\(([^)]+)\)"""
