@@ -28,7 +28,12 @@ private class SystemManagedProcess(private val process: Process) : ManagedProces
     override val stdout: BufferedReader = process.inputStream.bufferedReader()
     override val stderr: BufferedReader = process.errorStream.bufferedReader()
     override val exitCode: Int get() = process.exitValue()
-    override fun isAlive(): Boolean = process.isAlive
+    override fun isAlive(): Boolean = try {
+        process.exitValue()
+        false
+    } catch (_: IllegalThreadStateException) {
+        true
+    }
     override fun destroy() {
         process.destroy()
         stdout.close()
