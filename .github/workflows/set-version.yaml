@@ -1,0 +1,42 @@
+name: Set Version
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.1.0)'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  set-version:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          token: ${{ secrets.GH_TOKEN }}
+
+      - name: Bump version
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          CURRENT_CODE=$(grep '^VERSION_CODE=' gradle.properties | cut -d'=' -f2)
+          NEW_CODE=$((CURRENT_CODE + 1))
+          sed -i "s/^VERSION_CODE=.*/VERSION_CODE=$NEW_CODE/" gradle.properties
+          sed -i "s/^VERSION_NAME=.*/VERSION_NAME=$VERSION/" gradle.properties
+          echo "VERSION_CODE=$NEW_CODE, VERSION_NAME=$VERSION"
+
+      - name: Commit and tag
+        env:
+          VERSION: ${{ github.event.inputs.version }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add gradle.properties
+          git commit -m "Bump version to $VERSION"
+          git push
+          git tag "v$VERSION"
+          git push origin "v$VERSION"

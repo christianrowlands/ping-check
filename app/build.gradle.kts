@@ -15,8 +15,8 @@ android {
         applicationId = "com.caskfive.pingcheck"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = (findProperty("VERSION_CODE") as String).toInt()
+        versionName = findProperty("VERSION_NAME") as String
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
