@@ -33,17 +33,14 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
-import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLine
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
+import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.lineSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.LineCartesianLayer
+import com.patrykandpatrick.vico.compose.common.Fill
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
 
@@ -187,11 +184,11 @@ private fun LatencyChartContent(
     CartesianChartHost(
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(
-                LineCartesianLayer.LineProvider.series(
-                    LineCartesianLayer.rememberLine(
-                        fill = LineCartesianLayer.LineFill.single(fill(chartColor)),
+                lineProvider = LineCartesianLayer.LineProvider.series(
+                    LineCartesianLayer.Line(
+                        fill = LineCartesianLayer.LineFill.single(Fill(chartColor)),
                         areaFill = LineCartesianLayer.AreaFill.single(
-                            fill(chartColor.copy(alpha = 0.15f))
+                            Fill(chartColor.copy(alpha = 0.15f))
                         ),
                     )
                 )
