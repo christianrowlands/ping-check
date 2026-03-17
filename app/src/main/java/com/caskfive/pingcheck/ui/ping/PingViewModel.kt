@@ -12,8 +12,6 @@ import com.caskfive.pingcheck.domain.ping.PingEvent
 import com.caskfive.pingcheck.data.db.FavoriteEntity
 import com.caskfive.pingcheck.repository.FavoritesRepository
 import com.caskfive.pingcheck.repository.PingRepository
-import com.caskfive.pingcheck.service.PingServiceManager
-import com.caskfive.pingcheck.service.PingServiceState
 import com.caskfive.pingcheck.ui.components.IpInfoState
 import com.caskfive.pingcheck.util.DnsUtils
 import com.caskfive.pingcheck.util.NetworkChecker
@@ -91,7 +89,6 @@ class PingViewModel @Inject constructor(
     private val preferencesManager: PreferencesManager,
     private val geoLocationService: GeoLocationService,
     private val favoritesRepository: FavoritesRepository,
-    private val serviceManager: PingServiceManager,
     private val networkChecker: NetworkChecker,
 ) : ViewModel() {
 
@@ -115,7 +112,7 @@ class PingViewModel @Inject constructor(
             val prefs = preferencesManager.preferences.first()
             _state.update {
                 it.copy(
-                    count = prefs.defaultCount,
+                    count = prefs.defaultCount.coerceAtLeast(1),
                     interval = prefs.defaultInterval,
                     packetSize = prefs.defaultPacketSize,
                     timeout = prefs.defaultTimeout,
@@ -135,22 +132,6 @@ class PingViewModel @Inject constructor(
                 _state.update { state ->
                     val isFav = favorites.any { it.host == state.targetHost }
                     state.copy(favorites = defaults + userFavs, isFavorite = isFav)
-                }
-            }
-        }
-        // Observe foreground service state to update UI isRunning
-        viewModelScope.launch {
-            serviceManager.serviceState.collect { serviceState ->
-                val isServiceRunning = serviceState == PingServiceState.RUNNING
-                _state.update { state ->
-                    // If service just stopped and we were in continuous mode, update isRunning
-                    if (!isServiceRunning && state.isRunning && state.count == 0) {
-                        state.copy(isRunning = false)
-                    } else if (isServiceRunning && state.count == 0) {
-                        state.copy(isRunning = true)
-                    } else {
-                        state
-                    }
                 }
             }
         }
@@ -200,7 +181,7 @@ class PingViewModel @Inject constructor(
     }
 
     fun onCountChanged(count: Int) {
-        _state.update { it.copy(count = count) }
+        _state.update { it.copy(count = count.coerceAtLeast(1)) }
     }
 
     fun onIntervalChanged(interval: Float) {
@@ -244,7 +225,7 @@ class PingViewModel @Inject constructor(
         stopPing()
 
         // Validate and coerce PingConfig parameters
-        val validatedCount = _state.value.count.coerceIn(0, 10000)
+        val validatedCount = _state.value.count.coerceIn(1, 10000)
         val validatedInterval = _state.value.interval.coerceIn(0.2f, 60f)
         val validatedPacketSize = _state.value.packetSize.coerceIn(8, 1472)
         val validatedTimeout = _state.value.timeout.coerceIn(1, 60)
@@ -280,15 +261,6 @@ class PingViewModel @Inject constructor(
             timeoutSeconds = validatedTimeout,
         )
 
-        // If continuous mode (count == 0), delegate to foreground service
-        if (config.isContinuous) {
-            serviceManager.startContinuousPing(config)
-            // isRunning is managed by observing serviceManager.serviceState
-            _state.update { it.copy(isRunning = true, isResolving = false) }
-            return
-        }
-
-        // Non-continuous mode: run in viewModelScope as before
         pingJob = viewModelScope.launch {
             // Create session in DB
             val session = PingSessionEntity(
@@ -332,13 +304,6 @@ class PingViewModel @Inject constructor(
     }
 
     fun stopPing() {
-        // If continuous mode, stop the foreground service
-        if (_state.value.count == 0 && serviceManager.serviceState.value == PingServiceState.RUNNING) {
-            serviceManager.stopPing()
-            _state.update { it.copy(isRunning = false) }
-            return
-        }
-
         pingJob?.cancel()
         pingJob = null
         if (_state.value.isRunning) {

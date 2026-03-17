@@ -9,6 +9,9 @@ plugins {
 
 android {
     namespace = "com.caskfive.pingcheck"
+    base {
+        archivesName = "PingCheck-${findProperty("VERSION_NAME") as String}"
+    }
     compileSdk = 36
 
     defaultConfig {

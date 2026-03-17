@@ -219,7 +219,7 @@ fun PingScreen(
                     )
                 }
                 item(key = "settings_chip") {
-                    val countDisplay = if (state.count == 0) "\u221E" else state.count.toString()
+                    val countDisplay = state.count.toString()
                     FilterChip(
                         selected = state.showAdvancedSettings,
                         onClick = viewModel::toggleAdvancedSettings,
@@ -643,7 +643,7 @@ private fun AdvancedSettings(state: PingScreenState, viewModel: PingViewModel) {
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
-                value = if (state.count == 0) "\u221e" else state.count.toString(),
+                value = state.count.toString(),
                 onValueChange = { viewModel.onCountChanged(it.toIntOrNull() ?: 4) },
                 modifier = Modifier.weight(1f),
                 label = { Text("Count") },

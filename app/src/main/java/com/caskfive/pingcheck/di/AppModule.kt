@@ -4,8 +4,6 @@ import com.caskfive.pingcheck.domain.ping.PingBinaryProvider
 import com.caskfive.pingcheck.domain.ping.SystemPingBinaryProvider
 import com.caskfive.pingcheck.domain.process.ProcessExecutor
 import com.caskfive.pingcheck.domain.process.SystemProcessExecutor
-import com.caskfive.pingcheck.service.PingServiceManager
-import com.caskfive.pingcheck.service.PingServiceManagerImpl
 import com.caskfive.pingcheck.util.DnsResolver
 import com.caskfive.pingcheck.util.NetworkChecker
 import com.caskfive.pingcheck.util.SystemDnsResolver
@@ -35,8 +33,4 @@ object AppModule {
     @Provides
     @Singleton
     fun provideNetworkChecker(impl: SystemNetworkChecker): NetworkChecker = impl
-
-    @Provides
-    @Singleton
-    fun providePingServiceManager(impl: PingServiceManagerImpl): PingServiceManager = impl
 }
