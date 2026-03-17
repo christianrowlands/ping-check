@@ -75,6 +75,7 @@ import com.caskfive.pingcheck.data.db.PingResultEntity
 import com.caskfive.pingcheck.data.db.PingSessionEntity
 import com.caskfive.pingcheck.data.db.TracerouteHopEntity
 import com.caskfive.pingcheck.data.db.TracerouteSessionEntity
+import com.caskfive.pingcheck.ui.TRACEROUTE_ENABLED
 import com.caskfive.pingcheck.ui.components.LatencyChart
 import com.caskfive.pingcheck.ui.components.LatencyDataPoint
 import com.caskfive.pingcheck.ui.theme.LatencyGoodDark
@@ -130,7 +131,9 @@ fun HistoryListScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HistoryFilterType.entries.forEach { filterType ->
+            HistoryFilterType.entries
+                .filter { TRACEROUTE_ENABLED || it != HistoryFilterType.TRACEROUTE }
+                .forEach { filterType ->
                 FilterChip(
                     selected = state.filterType == filterType,
                     onClick = { viewModel.onFilterTypeChanged(filterType) },
@@ -210,7 +213,12 @@ fun HistoryListScreen(
         AlertDialog(
             onDismissRequest = viewModel::dismissDeleteAllConfirmation,
             title = { Text("Delete all history?") },
-            text = { Text("This will permanently delete all ping and traceroute history. This action cannot be undone.") },
+            text = {
+                Text(
+                    if (TRACEROUTE_ENABLED) "This will permanently delete all ping and traceroute history. This action cannot be undone."
+                    else "This will permanently delete all ping history. This action cannot be undone."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = viewModel::deleteAll,

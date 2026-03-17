@@ -3,6 +3,7 @@ package com.caskfive.pingcheck.ui.history
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.caskfive.pingcheck.data.db.HistoryViewItem
+import com.caskfive.pingcheck.ui.TRACEROUTE_ENABLED
 import com.caskfive.pingcheck.data.db.PingResultEntity
 import com.caskfive.pingcheck.data.db.PingSessionEntity
 import com.caskfive.pingcheck.data.db.TracerouteHopEntity
@@ -194,6 +195,8 @@ class HistoryViewModel @Inject constructor(
                     items.filter { it.type == filter.name.lowercase() }
                 } else {
                     items
+                }.let { list ->
+                    if (!TRACEROUTE_ENABLED) list.filter { it.type != "traceroute" } else list
                 }
 
                 // Fetch sparkline / hop path data for visible items

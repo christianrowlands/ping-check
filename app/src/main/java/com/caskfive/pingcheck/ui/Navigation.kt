@@ -33,6 +33,9 @@ import com.caskfive.pingcheck.ui.ping.PingScreen
 import com.caskfive.pingcheck.ui.settings.SettingsScreen
 import com.caskfive.pingcheck.ui.traceroute.TracerouteScreen
 
+/** Flip to true to re-enable traceroute in the UI */
+const val TRACEROUTE_ENABLED = false
+
 enum class BottomNavItem(
     val route: String,
     val label: String,
@@ -67,7 +70,9 @@ fun PingCheckNavHost() {
         Scaffold { innerPadding ->
             Row(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
                 NavigationRail {
-                    BottomNavItem.entries.forEach { item ->
+                    BottomNavItem.entries
+                        .filter { TRACEROUTE_ENABLED || it != BottomNavItem.Traceroute }
+                        .forEach { item ->
                         NavigationRailItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
@@ -89,7 +94,9 @@ fun PingCheckNavHost() {
         Scaffold(
             bottomBar = {
                 NavigationBar {
-                    BottomNavItem.entries.forEach { item ->
+                    BottomNavItem.entries
+                        .filter { TRACEROUTE_ENABLED || it != BottomNavItem.Traceroute }
+                        .forEach { item ->
                         NavigationBarItem(
                             icon = { Icon(item.icon, contentDescription = item.label) },
                             label = { Text(item.label) },
@@ -113,7 +120,9 @@ fun PingCheckNavHost() {
 
 private fun NavGraphBuilder.pingCheckGraph() {
     composable(BottomNavItem.Ping.route) { PingScreen() }
-    composable(BottomNavItem.Traceroute.route) { TracerouteScreen() }
+    if (TRACEROUTE_ENABLED) {
+        composable(BottomNavItem.Traceroute.route) { TracerouteScreen() }
+    }
     composable(BottomNavItem.History.route) { HistoryListScreen() }
     composable(BottomNavItem.Settings.route) { SettingsScreen() }
 }
