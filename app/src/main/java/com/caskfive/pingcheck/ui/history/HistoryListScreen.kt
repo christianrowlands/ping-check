@@ -27,12 +27,15 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DeleteForever
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -109,6 +112,13 @@ fun HistoryListScreen(
             modifier = Modifier.fillMaxWidth(),
             placeholder = { Text("Search by host or IP") },
             leadingIcon = { Icon(Icons.Default.Search, contentDescription = "Search") },
+            trailingIcon = {
+                if (state.searchQuery.isNotEmpty()) {
+                    IconButton(onClick = { viewModel.onSearchQueryChanged("") }) {
+                        Icon(Icons.Default.Clear, contentDescription = "Clear search")
+                    }
+                }
+            },
             singleLine = true,
         )
 
@@ -118,6 +128,7 @@ fun HistoryListScreen(
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
             HistoryFilterType.entries.forEach { filterType ->
                 FilterChip(
@@ -129,6 +140,16 @@ fun HistoryListScreen(
                         selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
                     ),
                 )
+            }
+            Spacer(modifier = Modifier.weight(1f))
+            if (state.items.isNotEmpty()) {
+                IconButton(onClick = viewModel::showDeleteAllConfirmation) {
+                    Icon(
+                        Icons.Default.DeleteForever,
+                        contentDescription = "Delete all history",
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
             }
         }
 
@@ -181,6 +202,30 @@ fun HistoryListScreen(
                 viewModel.exportPingSessionCsv(session, results)
             },
             context = context,
+        )
+    }
+
+    // Delete all confirmation dialog
+    if (state.showDeleteAllConfirmation) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissDeleteAllConfirmation,
+            title = { Text("Delete all history?") },
+            text = { Text("This will permanently delete all ping and traceroute history. This action cannot be undone.") },
+            confirmButton = {
+                TextButton(
+                    onClick = viewModel::deleteAll,
+                    colors = ButtonDefaults.textButtonColors(
+                        contentColor = MaterialTheme.colorScheme.error,
+                    ),
+                ) {
+                    Text("Delete All")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = viewModel::dismissDeleteAllConfirmation) {
+                    Text("Cancel")
+                }
+            },
         )
     }
 }

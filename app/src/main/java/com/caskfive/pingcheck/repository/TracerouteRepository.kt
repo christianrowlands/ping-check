@@ -47,6 +47,10 @@ class TracerouteRepository @Inject constructor(
         return tracerouteDao.observeAllSessions()
     }
 
+    suspend fun deleteAllSessions() {
+        tracerouteDao.deleteAllSessions()
+    }
+
     suspend fun deleteSessionsBefore(beforeTimestamp: Long) {
         tracerouteDao.deleteSessionsBefore(beforeTimestamp)
     }

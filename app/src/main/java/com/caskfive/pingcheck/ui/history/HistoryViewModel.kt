@@ -42,6 +42,7 @@ data class HistoryScreenState(
     val csvExportContent: CsvExportData? = null,
     val sparklineData: Map<String, List<Float>> = emptyMap(),
     val hopPathData: Map<String, List<Boolean>> = emptyMap(),
+    val showDeleteAllConfirmation: Boolean = false,
 )
 
 // Data class to hold CSV export content ready for sharing
@@ -91,6 +92,21 @@ class HistoryViewModel @Inject constructor(
     fun deleteItem(item: HistoryViewItem) {
         viewModelScope.launch {
             historyRepository.deleteSession(item.id, item.type)
+        }
+    }
+
+    fun showDeleteAllConfirmation() {
+        _state.update { it.copy(showDeleteAllConfirmation = true) }
+    }
+
+    fun dismissDeleteAllConfirmation() {
+        _state.update { it.copy(showDeleteAllConfirmation = false) }
+    }
+
+    fun deleteAll() {
+        viewModelScope.launch {
+            historyRepository.deleteAll()
+            _state.update { it.copy(showDeleteAllConfirmation = false) }
         }
     }
 

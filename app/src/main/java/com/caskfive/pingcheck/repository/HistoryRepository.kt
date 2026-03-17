@@ -35,6 +35,11 @@ class HistoryRepository @Inject constructor(
         }
     }
 
+    suspend fun deleteAll() {
+        pingRepository.deleteAllSessions()
+        tracerouteRepository.deleteAllSessions()
+    }
+
     suspend fun deleteSessionsBefore(beforeTimestamp: Long) {
         pingRepository.deleteSessionsBefore(beforeTimestamp)
         tracerouteRepository.deleteSessionsBefore(beforeTimestamp)

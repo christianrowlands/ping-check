@@ -59,6 +59,10 @@ class PingRepository @Inject constructor(
         pingDao.deleteSession(id)
     }
 
+    suspend fun deleteAllSessions() {
+        pingDao.deleteAllSessions()
+    }
+
     suspend fun deleteSessionsBefore(beforeTimestamp: Long) {
         pingDao.deleteSessionsBefore(beforeTimestamp)
     }

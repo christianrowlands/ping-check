@@ -35,6 +35,9 @@ interface TracerouteDao {
     @Query("DELETE FROM traceroute_sessions WHERE id = :id")
     suspend fun deleteSession(id: Long)
 
+    @Query("DELETE FROM traceroute_sessions")
+    suspend fun deleteAllSessions()
+
     @Query("DELETE FROM traceroute_sessions WHERE start_time < :beforeTimestamp")
     suspend fun deleteSessionsBefore(beforeTimestamp: Long)
 

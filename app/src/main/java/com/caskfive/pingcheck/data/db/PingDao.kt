@@ -50,6 +50,9 @@ interface PingDao {
     @Query("DELETE FROM ping_sessions WHERE id = :id")
     suspend fun deleteSession(id: Long)
 
+    @Query("DELETE FROM ping_sessions")
+    suspend fun deleteAllSessions()
+
     @Query("DELETE FROM ping_sessions WHERE start_time < :beforeTimestamp")
     suspend fun deleteSessionsBefore(beforeTimestamp: Long)
 

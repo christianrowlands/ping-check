@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -155,6 +156,10 @@ fun PingScreen(
                 trailingIcon = {
                     if (state.isResolving) {
                         CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else if (state.targetHost.isNotEmpty()) {
+                        IconButton(onClick = { viewModel.onTargetHostChanged("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
                     }
                 },
             )

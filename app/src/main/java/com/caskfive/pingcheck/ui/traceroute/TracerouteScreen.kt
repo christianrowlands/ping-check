@@ -31,6 +31,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -128,6 +129,13 @@ fun TracerouteScreen(
                         if (!state.isRunning) viewModel.startTrace()
                     }
                 ),
+                trailingIcon = {
+                    if (state.targetHost.isNotEmpty() && !state.isRunning) {
+                        IconButton(onClick = { viewModel.onTargetHostChanged("") }) {
+                            Icon(Icons.Default.Clear, contentDescription = "Clear")
+                        }
+                    }
+                },
             )
 
             Button(
