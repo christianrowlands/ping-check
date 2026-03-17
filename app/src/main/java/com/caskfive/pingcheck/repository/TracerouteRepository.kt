@@ -50,4 +50,8 @@ class TracerouteRepository @Inject constructor(
     suspend fun deleteSessionsBefore(beforeTimestamp: Long) {
         tracerouteDao.deleteSessionsBefore(beforeTimestamp)
     }
+
+    suspend fun getHopTimeoutFlags(sessionId: Long, limit: Int = 6): List<Boolean> {
+        return tracerouteDao.getHopTimeoutFlags(sessionId, limit)
+    }
 }

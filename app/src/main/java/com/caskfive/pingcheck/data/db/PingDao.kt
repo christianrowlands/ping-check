@@ -52,4 +52,7 @@ interface PingDao {
 
     @Query("DELETE FROM ping_sessions WHERE start_time < :beforeTimestamp")
     suspend fun deleteSessionsBefore(beforeTimestamp: Long)
+
+    @Query("SELECT rtt_ms FROM ping_results WHERE session_id = :sessionId AND is_success = 1 ORDER BY sequence_number DESC LIMIT :limit")
+    suspend fun getRecentRttValues(sessionId: Long, limit: Int = 4): List<Float?>
 }

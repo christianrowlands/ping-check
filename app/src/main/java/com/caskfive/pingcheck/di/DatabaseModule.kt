@@ -30,7 +30,7 @@ object DatabaseModule {
         )
             // Only allow destructive migration from version 1 (initial release).
             // For future versions, implement proper Migration objects to preserve user data.
-            .fallbackToDestructiveMigrationFrom(1)
+            .fallbackToDestructiveMigrationFrom(1, 2)
             .build()
     }
 

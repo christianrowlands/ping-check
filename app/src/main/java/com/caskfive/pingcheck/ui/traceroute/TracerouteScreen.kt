@@ -5,11 +5,16 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -19,26 +24,26 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -49,9 +54,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
@@ -59,6 +62,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.caskfive.pingcheck.ui.theme.LatencyGoodDark
+import com.caskfive.pingcheck.ui.theme.MutedDark
+import com.caskfive.pingcheck.ui.theme.ResultRowStyle
 import com.caskfive.pingcheck.util.InputValidator
 
 @Composable
@@ -70,7 +76,6 @@ fun TracerouteScreen(
 
     var hasInteracted by remember { mutableStateOf(false) }
 
-
     // Validation state
     val isValidationError = hasInteracted &&
             state.targetHost.isNotEmpty() &&
@@ -81,91 +86,122 @@ fun TracerouteScreen(
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        // Target input
-        OutlinedTextField(
-            value = state.targetHost,
-            onValueChange = {
-                hasInteracted = true
-                viewModel.onTargetHostChanged(it)
-            },
-            modifier = Modifier
-                .fillMaxWidth(),
-            label = { Text("Host or IP address") },
-            placeholder = { Text("8.8.8.8 or google.com") },
-            singleLine = true,
-            enabled = !state.isRunning,
-            isError = isValidationError,
-            supportingText = if (isValidationError) {
-                { Text("Invalid hostname or IP address") }
-            } else {
-                null
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go,
-            ),
-            keyboardActions = KeyboardActions(
-                onGo = {
-                    if (!state.isRunning) viewModel.startTrace()
-                }
-            ),
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Settings toggle
-        TextButton(onClick = viewModel::toggleSettings) {
-            Text(if (state.showSettings) "Hide Settings" else "Settings")
-            Icon(
-                if (state.showSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (state.showSettings) "Collapse settings" else "Expand settings",
-                modifier = Modifier.size(20.dp),
+        // === 1. Input row — same pattern as Ping screen ===
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            OutlinedTextField(
+                value = state.targetHost,
+                onValueChange = {
+                    hasInteracted = true
+                    viewModel.onTargetHostChanged(it)
+                },
+                modifier = Modifier.weight(1f),
+                label = { Text("Host or IP address") },
+                placeholder = { Text("8.8.8.8 or google.com") },
+                singleLine = true,
+                enabled = !state.isRunning,
+                isError = isValidationError,
+                supportingText = if (isValidationError) {
+                    { Text("Invalid hostname or IP address") }
+                } else {
+                    null
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Go,
+                ),
+                keyboardActions = KeyboardActions(
+                    onGo = {
+                        if (!state.isRunning) viewModel.startTrace()
+                    }
+                ),
             )
+
+            // Start/Stop button with animated color
+            val buttonColor by animateColorAsState(
+                targetValue = if (state.isRunning) {
+                    MaterialTheme.colorScheme.error
+                } else {
+                    MaterialTheme.colorScheme.primary
+                },
+                label = "buttonColor",
+            )
+
+            Button(
+                onClick = { if (state.isRunning) viewModel.stopTrace() else viewModel.startTrace() },
+                modifier = Modifier.size(56.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                contentPadding = ButtonDefaults.TextButtonContentPadding,
+            ) {
+                Icon(
+                    if (state.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = if (state.isRunning) "Stop traceroute" else "Start traceroute",
+                )
+            }
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // === 2. Settings chip ===
+        AssistChip(
+            onClick = viewModel::toggleSettings,
+            label = {
+                Text("\u2699 ${state.maxHops} hops \u00B7 ${state.timeout}s timeout")
+            },
+        )
 
         AnimatedVisibility(visible = state.showSettings) {
             TracerouteSettings(state, viewModel)
         }
 
-        Spacer(modifier = Modifier.height(8.dp))
+        Spacer(modifier = Modifier.height(12.dp))
 
-        // Start/Stop button
-        Button(
-            onClick = { if (state.isRunning) viewModel.stopTrace() else viewModel.startTrace() },
-            modifier = Modifier.fillMaxWidth(),
-            colors = if (state.isRunning) {
-                ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            } else {
-                ButtonDefaults.buttonColors()
-            },
-        ) {
-            Icon(
-                if (state.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = if (state.isRunning) "Stop traceroute" else "Start traceroute",
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(if (state.isRunning) "STOP" else "TRACE")
-        }
-
-        // Error display
+        // === 3. Error card ===
         state.error?.let { error ->
-            Spacer(modifier = Modifier.height(8.dp))
             TracerouteErrorCard(error, onRetry = { viewModel.startTrace() })
+            Spacer(modifier = Modifier.height(12.dp))
         }
 
-        // Resolved IP
-        state.resolvedIp?.let { ip ->
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Tracing route to ${state.targetHost} ($ip)",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
-
-        // Copy/Share buttons
+        // === 4. Summary bar (shown when hops exist) ===
         if (state.hops.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
+            SummaryBar(
+                targetHost = state.targetHost,
+                resolvedIp = state.resolvedIp,
+                hops = state.hops,
+            )
+            Spacer(modifier = Modifier.height(12.dp))
+        }
+
+        // === 5. Visual hop path ===
+        if (state.hops.isNotEmpty()) {
+            Card(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                ),
+            ) {
+                HopPathList(
+                    hops = state.hops,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(12.dp),
+                )
+            }
+        } else {
+            // Take remaining space even when no hops
+            Spacer(modifier = Modifier.weight(1f))
+        }
+
+        // === 6. Copy/Share buttons ===
+        if (state.hops.isNotEmpty()) {
+            Spacer(modifier = Modifier.height(12.dp))
             CopyShareButtons(
                 hops = state.hops,
                 targetHost = state.targetHost,
@@ -173,18 +209,236 @@ fun TracerouteScreen(
                 context = context,
             )
         }
+    }
+}
 
-        // Hop list
-        if (state.hops.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(8.dp))
-            HopHeader()
-            HopList(
-                hops = state.hops,
-                modifier = Modifier.weight(1f),
+@Composable
+private fun SummaryBar(
+    targetHost: String,
+    resolvedIp: String?,
+    hops: List<HopDisplay>,
+) {
+    val lastNonTimeoutHop = hops.lastOrNull { !it.isTimeout && it.rttMs != null }
+    val totalHops = hops.size
+    val finalRtt = lastNonTimeoutHop?.rttMs
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            // Left: target -> resolvedIp
+            Text(
+                text = buildString {
+                    append(targetHost)
+                    resolvedIp?.let {
+                        append(" \u2192 $it")
+                    }
+                },
+                style = ResultRowStyle,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.weight(1f, fill = false),
             )
-        } else {
-            // Take remaining space even when no hops
-            Spacer(modifier = Modifier.weight(1f))
+
+            Spacer(modifier = Modifier.width(8.dp))
+
+            // Right: badge "N hops . Xms"
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.primaryContainer,
+            ) {
+                Text(
+                    text = buildString {
+                        append("$totalHops hops")
+                        finalRtt?.let {
+                            append(" \u00B7 ${"%.0f".format(it)}ms")
+                        }
+                    },
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                    style = ResultRowStyle,
+                    fontWeight = FontWeight.Medium,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HopPathList(
+    hops: List<HopDisplay>,
+    modifier: Modifier = Modifier,
+) {
+    val listState = rememberLazyListState()
+
+    // Auto-scroll to bottom
+    LaunchedEffect(hops.size) {
+        if (hops.isNotEmpty()) {
+            listState.animateScrollToItem(hops.size - 1)
+        }
+    }
+
+    LazyColumn(
+        state = listState,
+        modifier = modifier,
+    ) {
+        items(hops, key = { it.hopNumber }) { hop ->
+            val isLastHop = hop == hops.last()
+            SelectionContainer {
+                HopPathRow(
+                    hop = hop,
+                    isLastHop = isLastHop,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun HopPathRow(
+    hop: HopDisplay,
+    isLastHop: Boolean,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(IntrinsicSize.Min),
+    ) {
+        // Node indicator column
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+            modifier = Modifier
+                .width(32.dp)
+                .fillMaxHeight(),
+        ) {
+            Spacer(modifier = Modifier.height(4.dp))
+
+            // Dot
+            val dotSize = if (hop.isDestination) 16.dp else 12.dp
+            if (hop.isTimeout) {
+                // Hollow circle for timeout
+                Box(
+                    modifier = Modifier
+                        .size(dotSize)
+                        .border(2.dp, MutedDark, CircleShape),
+                )
+            } else {
+                // Filled circle
+                Box(
+                    modifier = Modifier
+                        .size(dotSize)
+                        .background(MaterialTheme.colorScheme.primary, CircleShape),
+                )
+            }
+
+            // Connecting line (not for last hop)
+            if (!isLastHop) {
+                Box(
+                    modifier = Modifier
+                        .width(2.dp)
+                        .weight(1f)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)),
+                )
+            }
+        }
+
+        // Content column
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 8.dp, bottom = 12.dp, top = 2.dp),
+        ) {
+            if (hop.isTimeout) {
+                // Timeout row
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = "${hop.hopNumber}  * * *",
+                        style = ResultRowStyle,
+                        color = MutedDark,
+                    )
+                    Text(
+                        text = "\u2014",
+                        style = ResultRowStyle,
+                        color = MutedDark,
+                    )
+                }
+            } else {
+                // IP + RTT row
+                val textColor = if (hop.isDestination) {
+                    MaterialTheme.colorScheme.primary
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        text = hop.ipAddress ?: "unknown",
+                        style = ResultRowStyle,
+                        color = textColor,
+                    )
+
+                    // RTT with color coding
+                    val rttText = hop.rttMs?.let { "%.1f ms".format(it) } ?: "\u2014"
+                    val rttColor = when {
+                        hop.isDestination -> MaterialTheme.colorScheme.primary
+                        hop.rttMs == null -> MutedDark
+                        hop.rttMs < 10f -> LatencyGoodDark
+                        hop.rttMs < 50f -> MaterialTheme.colorScheme.primary
+                        hop.rttMs < 100f -> MaterialTheme.colorScheme.tertiary
+                        else -> MaterialTheme.colorScheme.error
+                    }
+
+                    Text(
+                        text = rttText,
+                        style = ResultRowStyle,
+                        fontWeight = FontWeight.Medium,
+                        color = rttColor,
+                    )
+                }
+
+                // Hostname (if available)
+                hop.hostname?.let { hostname ->
+                    Text(
+                        text = hostname,
+                        fontSize = 10.sp,
+                        color = if (hop.isDestination) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MutedDark
+                        },
+                    )
+                }
+
+                // Country code (if available)
+                hop.countryCode?.let { cc ->
+                    Text(
+                        text = cc,
+                        fontSize = 10.sp,
+                        color = if (hop.isDestination) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MutedDark
+                        },
+                    )
+                }
+            }
         }
     }
 }
@@ -240,7 +494,7 @@ private fun CopyShareButtons(
 
 @Composable
 private fun TracerouteSettings(state: TracerouteScreenState, viewModel: TracerouteViewModel) {
-    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -271,6 +525,7 @@ private fun TracerouteSettings(state: TracerouteScreenState, viewModel: Tracerou
 private fun TracerouteErrorCard(error: String, onRetry: () -> Unit) {
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
         ),
@@ -286,150 +541,5 @@ private fun TracerouteErrorCard(error: String, onRetry: () -> Unit) {
                 Text("Retry")
             }
         }
-    }
-}
-
-@Composable
-private fun HopHeader() {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(
-                MaterialTheme.colorScheme.surfaceVariant,
-                shape = RoundedCornerShape(topStart = 8.dp, topEnd = 8.dp),
-            )
-            .padding(horizontal = 12.dp, vertical = 8.dp),
-    ) {
-        Text(
-            text = "#",
-            modifier = Modifier.width(32.dp),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = "IP Address",
-            modifier = Modifier.weight(1f),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = "RTT",
-            modifier = Modifier.width(72.dp),
-            style = MaterialTheme.typography.labelSmall,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-}
-
-@Composable
-private fun HopList(
-    hops: List<HopDisplay>,
-    modifier: Modifier = Modifier,
-) {
-    val listState = rememberLazyListState()
-
-    // Auto-scroll to bottom
-    LaunchedEffect(hops.size) {
-        if (hops.isNotEmpty()) {
-            listState.animateScrollToItem(hops.size - 1)
-        }
-    }
-
-    LazyColumn(
-        state = listState,
-        modifier = modifier.fillMaxWidth(),
-    ) {
-        items(hops, key = { it.hopNumber }) { hop ->
-            SelectionContainer {
-                HopRow(hop)
-            }
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.outlineVariant,
-                thickness = 0.5.dp,
-            )
-        }
-    }
-}
-
-@Composable
-private fun HopRow(hop: HopDisplay) {
-    val textColor = when {
-        hop.isDestination -> MaterialTheme.colorScheme.primary
-        hop.isTimeout -> MaterialTheme.colorScheme.onSurfaceVariant
-        else -> MaterialTheme.colorScheme.onBackground
-    }
-
-    val backgroundColor = if (hop.isDestination) {
-        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.3f)
-    } else {
-        MaterialTheme.colorScheme.surface
-    }
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(backgroundColor)
-            .padding(horizontal = 12.dp, vertical = 6.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        // Hop number
-        Text(
-            text = hop.hopNumber.toString(),
-            modifier = Modifier.width(32.dp),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            color = textColor,
-        )
-
-        // IP / hostname / timeout
-        Column(modifier = Modifier.weight(1f)) {
-            if (hop.isTimeout) {
-                Text(
-                    text = "* * *",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp,
-                    color = textColor,
-                )
-            } else {
-                Text(
-                    text = hop.ipAddress ?: "unknown",
-                    fontFamily = FontFamily.Monospace,
-                    fontSize = 13.sp,
-                    color = textColor,
-                )
-                hop.hostname?.let { hostname ->
-                    Text(
-                        text = hostname,
-                        fontFamily = FontFamily.Monospace,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                hop.countryCode?.let { cc ->
-                    Text(
-                        text = cc,
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-            }
-        }
-
-        // RTT
-        Text(
-            text = when {
-                hop.isTimeout -> "-"
-                hop.rttMs != null -> "%.1f ms".format(hop.rttMs)
-                else -> "-"
-            },
-            modifier = Modifier.width(72.dp),
-            fontFamily = FontFamily.Monospace,
-            fontSize = 13.sp,
-            color = textColor,
-        )
     }
 }

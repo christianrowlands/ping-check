@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.Intent
 import android.widget.Toast
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -22,13 +23,13 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Description
-import androidx.compose.material.icons.filled.NetworkPing
-import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.AlertDialog
@@ -37,6 +38,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -51,6 +53,12 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -66,6 +74,10 @@ import com.caskfive.pingcheck.data.db.TracerouteHopEntity
 import com.caskfive.pingcheck.data.db.TracerouteSessionEntity
 import com.caskfive.pingcheck.ui.components.LatencyChart
 import com.caskfive.pingcheck.ui.components.LatencyDataPoint
+import com.caskfive.pingcheck.ui.theme.LatencyGoodDark
+import com.caskfive.pingcheck.ui.theme.LatencyModerateDark
+import com.caskfive.pingcheck.ui.theme.LatencyPoorDark
+import com.caskfive.pingcheck.ui.theme.MutedDark
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -112,6 +124,10 @@ fun HistoryListScreen(
                     selected = state.filterType == filterType,
                     onClick = { viewModel.onFilterTypeChanged(filterType) },
                     label = { Text(filterType.label) },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = MaterialTheme.colorScheme.primary,
+                        selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                    ),
                 )
             }
         }
@@ -147,6 +163,8 @@ fun HistoryListScreen(
             else -> {
                 HistoryList(
                     items = state.items,
+                    sparklineData = state.sparklineData,
+                    hopPathData = state.hopPathData,
                     onItemClick = viewModel::showDetail,
                     onItemDismissed = viewModel::deleteItem,
                 )
@@ -171,6 +189,8 @@ fun HistoryListScreen(
 @Composable
 private fun HistoryList(
     items: List<HistoryViewItem>,
+    sparklineData: Map<String, List<Float>>,
+    hopPathData: Map<String, List<Boolean>>,
     onItemClick: (HistoryViewItem) -> Unit,
     onItemDismissed: (HistoryViewItem) -> Unit,
 ) {
@@ -216,21 +236,50 @@ private fun HistoryList(
                 },
                 enableDismissFromStartToEnd = false,
             ) {
-                HistoryItemCard(item = item, onClick = { onItemClick(item) })
+                val key = "${item.type}_${item.id}"
+                HistoryItemCard(
+                    item = item,
+                    sparklineValues = sparklineData[key],
+                    hopTimeoutFlags = hopPathData[key],
+                    onClick = { onItemClick(item) },
+                )
             }
         }
+    }
+}
+
+/**
+ * Determines the quality color for a ping session based on latency and packet loss.
+ */
+private fun getPingQualityColor(avgRtt: Float?, packetLossPct: Float?): Color {
+    val rtt = avgRtt ?: return MutedDark
+    val loss = packetLossPct ?: 0f
+    return when {
+        rtt > 100f || loss > 25f -> LatencyPoorDark
+        rtt >= 50f || loss >= 5f -> LatencyModerateDark
+        else -> LatencyGoodDark
     }
 }
 
 @Composable
 private fun HistoryItemCard(
     item: HistoryViewItem,
+    sparklineValues: List<Float>?,
+    hopTimeoutFlags: List<Boolean>?,
     onClick: () -> Unit,
 ) {
+    val isPing = item.type == "ping"
+    val qualityColor = if (isPing) {
+        getPingQualityColor(item.avgRtt, item.packetLossPct)
+    } else {
+        MaterialTheme.colorScheme.secondary
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface,
         ),
@@ -241,53 +290,259 @@ private fun HistoryItemCard(
                 .padding(12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Icon(
-                imageVector = if (item.type == "ping") Icons.Default.NetworkPing else Icons.Default.Route,
-                contentDescription = item.type,
-                modifier = Modifier.size(28.dp),
-                tint = if (item.type == "ping") {
-                    MaterialTheme.colorScheme.primary
-                } else {
-                    MaterialTheme.colorScheme.secondary
-                },
+            // Quality indicator dot
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(qualityColor)
             )
 
             Spacer(modifier = Modifier.width(12.dp))
 
+            // Main content
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = item.targetHost,
-                    style = MaterialTheme.typography.bodyLarge,
-                    fontWeight = FontWeight.Medium,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
-                item.resolvedIp?.let { ip ->
+                // Primary line: target host + key metric
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
                     Text(
-                        text = ip,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        text = item.targetHost,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.Medium,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = if (isPing) {
+                            item.avgRtt?.let { "${"%.1f".format(it)} ms" } ?: "N/A"
+                        } else {
+                            item.hopCount?.let { "$it hops" } ?: "N/A"
+                        },
+                        style = MaterialTheme.typography.bodyMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = qualityColor,
+                        maxLines = 1,
                     )
                 }
-                Text(
-                    text = formatTimestamp(item.startTime),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
+
+                Spacer(modifier = Modifier.height(2.dp))
+
+                // Secondary line: resolved IP + relative time on left, mini viz + packet count on right
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    // Left: resolved IP + relative timestamp
+                    Column(modifier = Modifier.weight(1f, fill = false)) {
+                        val secondaryParts = mutableListOf<String>()
+                        item.resolvedIp?.let { secondaryParts.add("($it)") }
+                        secondaryParts.add(
+                            HistoryViewModel.formatRelativeTimestamp(item.startTime)
+                        )
+                        Text(
+                            text = secondaryParts.joinToString(" "),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.width(8.dp))
+
+                    // Right: mini visualization + packet count
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(6.dp),
+                    ) {
+                        if (isPing && sparklineValues != null && sparklineValues.isNotEmpty()) {
+                            MiniSparkline(
+                                values = sparklineValues,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(width = 48.dp, height = 20.dp),
+                            )
+                        } else if (!isPing && hopTimeoutFlags != null && hopTimeoutFlags.isNotEmpty()) {
+                            MiniHopPath(
+                                timeoutFlags = hopTimeoutFlags,
+                                totalHopCount = item.hopCount ?: hopTimeoutFlags.size,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(width = 48.dp, height = 20.dp),
+                            )
+                        }
+
+                        if (isPing && item.packetsSent != null && item.packetsReceived != null) {
+                            Text(
+                                text = "${item.packetsReceived}/${item.packetsSent}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Mini sparkline bar chart for ping sessions.
+ * Shows 4 bars representing recent RTT values, with height relative to the session min/max range.
+ */
+@Composable
+private fun MiniSparkline(
+    values: List<Float>,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    val barColor = color.copy(alpha = 0.6f)
+
+    Canvas(modifier = modifier) {
+        if (values.isEmpty()) return@Canvas
+
+        val barCount = 4
+        val gap = 2.dp.toPx()
+        val cornerRadius = 2.dp.toPx()
+        val totalGaps = (barCount - 1) * gap
+        val barWidth = (size.width - totalGaps) / barCount
+
+        // Bucket the values into 4 groups and average each
+        val bucketSize = values.size.toFloat() / barCount
+        val bucketAverages = (0 until barCount).map { i ->
+            val startIdx = (i * bucketSize).toInt()
+            val endIdx = ((i + 1) * bucketSize).toInt().coerceAtMost(values.size)
+            if (startIdx < endIdx) {
+                values.subList(startIdx, endIdx).average().toFloat()
+            } else {
+                values.lastOrNull() ?: 0f
+            }
+        }
+
+        val minVal = bucketAverages.min()
+        val maxVal = bucketAverages.max()
+        val range = (maxVal - minVal).coerceAtLeast(0.1f)
+
+        bucketAverages.forEachIndexed { index, avg ->
+            // Normalize to 0.15..1.0 range so even the smallest bar is visible
+            val normalizedHeight = ((avg - minVal) / range).coerceIn(0f, 1f)
+            val barHeight = (0.15f + normalizedHeight * 0.85f) * size.height
+            val x = index * (barWidth + gap)
+            val y = size.height - barHeight
+
+            drawRoundRect(
+                color = barColor,
+                topLeft = Offset(x, y),
+                size = Size(barWidth, barHeight),
+                cornerRadius = CornerRadius(cornerRadius, cornerRadius),
+            )
+        }
+    }
+}
+
+/**
+ * Mini hop path visualization for traceroute sessions.
+ * Shows dots connected by lines. Timeout hops are hollow, normal hops are filled.
+ * If more than 6 hops, shows first 2 + gap indicator + last 3.
+ */
+@Composable
+private fun MiniHopPath(
+    timeoutFlags: List<Boolean>,
+    totalHopCount: Int,
+    color: Color,
+    modifier: Modifier = Modifier,
+) {
+    Canvas(modifier = modifier) {
+        if (timeoutFlags.isEmpty()) return@Canvas
+
+        val dotRadius = 2.5.dp.toPx()
+        val lineWidth = 1.dp.toPx()
+        val centerY = size.height / 2f
+
+        // Determine which dots to show
+        val showFlags: List<Boolean?>
+        val needsGap = totalHopCount > 6 && timeoutFlags.size > 5
+
+        if (needsGap) {
+            // Show first 2, gap (null), last 3
+            val first2 = timeoutFlags.take(2)
+            val last3 = timeoutFlags.takeLast(3)
+            showFlags = first2 + listOf(null) + last3
+        } else {
+            showFlags = timeoutFlags.map { it as Boolean? }
+        }
+
+        val dotCount = showFlags.size
+        if (dotCount <= 1) {
+            // Single dot
+            drawCircle(
+                color = color,
+                radius = dotRadius,
+                center = Offset(size.width / 2f, centerY),
+            )
+            return@Canvas
+        }
+
+        val spacing = (size.width - dotRadius * 2) / (dotCount - 1).coerceAtLeast(1)
+
+        showFlags.forEachIndexed { index, isTimeout ->
+            val cx = dotRadius + index * spacing
+            val cy = centerY
+
+            // Draw connecting line to previous dot (if not the first)
+            if (index > 0) {
+                val prevCx = dotRadius + (index - 1) * spacing
+                val prevIsGap = showFlags[index - 1] == null
+                val currentIsGap = isTimeout == null
+
+                if (!prevIsGap && !currentIsGap) {
+                    drawLine(
+                        color = color.copy(alpha = 0.4f),
+                        start = Offset(prevCx + dotRadius, cy),
+                        end = Offset(cx - dotRadius, cy),
+                        strokeWidth = lineWidth,
+                    )
+                } else if (prevIsGap || currentIsGap) {
+                    // Dashed/gap indicator: draw small dots
+                    val midX = (prevCx + cx) / 2f
+                    drawCircle(
+                        color = color.copy(alpha = 0.3f),
+                        radius = 1.dp.toPx(),
+                        center = Offset(midX, cy),
+                    )
+                }
             }
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            item.summary?.let { summary ->
-                Text(
-                    text = summary,
-                    style = MaterialTheme.typography.bodySmall,
-                    fontFamily = FontFamily.Monospace,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                )
+            when (isTimeout) {
+                null -> {
+                    // Gap indicator: draw a small ellipsis dot
+                    drawCircle(
+                        color = color.copy(alpha = 0.3f),
+                        radius = 1.5.dp.toPx(),
+                        center = Offset(cx, cy),
+                    )
+                }
+                true -> {
+                    // Timeout: hollow dot
+                    drawCircle(
+                        color = color,
+                        radius = dotRadius,
+                        center = Offset(cx, cy),
+                        style = Stroke(width = lineWidth),
+                    )
+                }
+                false -> {
+                    // Normal: filled dot
+                    drawCircle(
+                        color = color,
+                        radius = dotRadius,
+                        center = Offset(cx, cy),
+                    )
+                }
             }
         }
     }

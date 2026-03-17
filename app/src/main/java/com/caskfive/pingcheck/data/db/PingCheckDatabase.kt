@@ -12,7 +12,7 @@ import androidx.room.RoomDatabase
         FavoriteEntity::class,
     ],
     views = [HistoryViewItem::class],
-    version = 1,
+    version = 2,
     exportSchema = true,
 )
 abstract class PingCheckDatabase : RoomDatabase() {

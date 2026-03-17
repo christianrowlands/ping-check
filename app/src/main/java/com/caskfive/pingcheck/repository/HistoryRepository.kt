@@ -64,4 +64,12 @@ class HistoryRepository @Inject constructor(
     suspend fun getTracerouteHops(sessionId: Long): List<TracerouteHopEntity> {
         return tracerouteRepository.getHops(sessionId)
     }
+
+    suspend fun getRecentRttValues(sessionId: Long, limit: Int = 4): List<Float?> {
+        return pingRepository.getRecentRttValues(sessionId, limit)
+    }
+
+    suspend fun getHopTimeoutFlags(sessionId: Long, limit: Int = 6): List<Boolean> {
+        return tracerouteRepository.getHopTimeoutFlags(sessionId, limit)
+    }
 }

@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -19,14 +21,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ContentCopy
-import androidx.compose.material.icons.filled.ExpandLess
-import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.StarBorder
@@ -37,32 +40,37 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.caskfive.pingcheck.ui.components.IpInfoCard
 import com.caskfive.pingcheck.ui.components.LatencyChart
 import com.caskfive.pingcheck.ui.components.LatencyDataPoint
+import com.caskfive.pingcheck.ui.theme.HeroStatStyle
+import com.caskfive.pingcheck.ui.theme.LatencyGoodDark
+import com.caskfive.pingcheck.ui.theme.ResultRowStyle
+import com.caskfive.pingcheck.ui.theme.StatsLabelStyle
+import com.caskfive.pingcheck.ui.theme.StatsValueStyle
 import com.caskfive.pingcheck.util.InputValidator
 
 @Composable
@@ -74,67 +82,103 @@ fun PingScreen(
 
     var hasInteracted by remember { mutableStateOf(false) }
 
+    // Track when a new ping starts for IpInfoCard collapse reset
+    var ipInfoCollapseReset by remember { mutableStateOf(false) }
+    LaunchedEffect(state.results.isEmpty() && state.isRunning) {
+        if (state.results.isEmpty() && state.isRunning) {
+            ipInfoCollapseReset = true
+        } else {
+            ipInfoCollapseReset = false
+        }
+    }
 
     // Validation state
     val isValidationError = hasInteracted &&
             state.targetHost.isNotEmpty() &&
             !InputValidator.isValidHost(state.targetHost)
 
+    // Animate button color between primary and error
+    val buttonColor by animateColorAsState(
+        targetValue = if (state.isRunning) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primary
+        },
+        label = "startStopButtonColor",
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
     ) {
-        // === Fixed top section: input area + StatsCard ===
+        // === 1. Input row — host field + Start/Stop button side-by-side ===
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.Top,
+        ) {
+            OutlinedTextField(
+                value = state.targetHost,
+                onValueChange = {
+                    hasInteracted = true
+                    viewModel.onTargetHostChanged(it)
+                },
+                modifier = Modifier.weight(1f),
+                label = { Text("Host or IP address") },
+                placeholder = { Text("8.8.8.8 or google.com") },
+                singleLine = true,
+                isError = isValidationError,
+                supportingText = if (isValidationError) {
+                    { Text("Invalid hostname or IP address") }
+                } else {
+                    null
+                },
+                keyboardOptions = KeyboardOptions(
+                    keyboardType = KeyboardType.Uri,
+                    imeAction = ImeAction.Go,
+                ),
+                keyboardActions = KeyboardActions(
+                    onGo = {
+                        if (state.isRunning) viewModel.stopPing() else viewModel.startPing()
+                    }
+                ),
+                leadingIcon = {
+                    IconButton(onClick = viewModel::toggleFavorite) {
+                        Icon(
+                            if (state.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
+                            contentDescription = if (state.isFavorite) "Remove from favorites" else "Add to favorites",
+                            tint = if (state.isFavorite) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        )
+                    }
+                },
+                trailingIcon = {
+                    if (state.isResolving) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                    }
+                },
+            )
 
-        // Target input with star toggle
-        OutlinedTextField(
-            value = state.targetHost,
-            onValueChange = {
-                hasInteracted = true
-                viewModel.onTargetHostChanged(it)
-            },
-            modifier = Modifier
-                .fillMaxWidth(),
-            label = { Text("Host or IP address") },
-            placeholder = { Text("8.8.8.8 or google.com") },
-            singleLine = true,
-            isError = isValidationError,
-            supportingText = if (isValidationError) {
-                { Text("Invalid hostname or IP address") }
-            } else {
-                null
-            },
-            keyboardOptions = KeyboardOptions(
-                keyboardType = KeyboardType.Uri,
-                imeAction = ImeAction.Go,
-            ),
-            keyboardActions = KeyboardActions(
-                onGo = {
-                    if (state.isRunning) viewModel.stopPing() else viewModel.startPing()
-                }
-            ),
-            leadingIcon = {
-                IconButton(onClick = viewModel::toggleFavorite) {
-                    Icon(
-                        if (state.isFavorite) Icons.Default.Star else Icons.Default.StarBorder,
-                        contentDescription = if (state.isFavorite) "Remove from favorites" else "Add to favorites",
-                        tint = if (state.isFavorite) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    )
-                }
-            },
-            trailingIcon = {
-                if (state.isResolving) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                }
-            },
-        )
+            Spacer(modifier = Modifier.width(8.dp))
 
-        // Favorites chips row
+            Button(
+                onClick = { if (state.isRunning) viewModel.stopPing() else viewModel.startPing() },
+                modifier = Modifier.size(56.dp),
+                shape = RoundedCornerShape(8.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
+                contentPadding = ButtonDefaults.TextButtonContentPadding,
+            ) {
+                Icon(
+                    if (state.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
+                    contentDescription = if (state.isRunning) "Stop ping" else "Start ping",
+                )
+            }
+        }
+
+        // === 2. Favorites + Settings chips row ===
         if (state.favorites.isNotEmpty()) {
             Spacer(modifier = Modifier.height(4.dp))
             LazyRow(
@@ -147,90 +191,69 @@ fun PingScreen(
                         label = { Text(fav.displayName ?: fav.host, maxLines = 1) },
                     )
                 }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Advanced settings toggle
-        TextButton(onClick = viewModel::toggleAdvancedSettings) {
-            Text(if (state.showAdvancedSettings) "Hide Settings" else "Advanced Settings")
-            Icon(
-                if (state.showAdvancedSettings) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
-                contentDescription = if (state.showAdvancedSettings) "Collapse settings" else "Expand settings",
-                modifier = Modifier.size(20.dp),
-            )
-        }
-
-        AnimatedVisibility(visible = state.showAdvancedSettings) {
-            AdvancedSettings(state, viewModel)
-        }
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // Start/Stop button
-        Button(
-            onClick = { if (state.isRunning) viewModel.stopPing() else viewModel.startPing() },
-            modifier = Modifier.fillMaxWidth(),
-            colors = if (state.isRunning) {
-                ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            } else {
-                ButtonDefaults.buttonColors()
-            },
-        ) {
-            Icon(
-                if (state.isRunning) Icons.Default.Stop else Icons.Default.PlayArrow,
-                contentDescription = if (state.isRunning) "Stop ping" else "Start ping",
-            )
-            Spacer(modifier = Modifier.width(8.dp))
-            Text(if (state.isRunning) "STOP" else "START")
-        }
-
-        // Error display
-        state.error?.let { error ->
-            Spacer(modifier = Modifier.height(8.dp))
-            ErrorCard(error, onRetry = { viewModel.startPing() })
-        }
-
-        // Stats card (sticky - stays in fixed top section)
-        if (state.results.isNotEmpty() || state.isRunning) {
-            Spacer(modifier = Modifier.height(8.dp))
-            StatsCard(state.stats)
-        }
-
-        // === Scrollable bottom section: chart + IP info + copy/share + ResultsList ===
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
-            // Latency chart
-            if (state.results.isNotEmpty()) {
-                item(key = "chart") {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    LatencyChart(
-                        dataPoints = state.results.map { result ->
-                            LatencyDataPoint(
-                                sequenceNumber = result.sequenceNumber,
-                                rttMs = result.rttMs,
+                item(key = "settings_chip") {
+                    val countDisplay = if (state.count == 0) "\u221E" else state.count.toString()
+                    AssistChip(
+                        onClick = viewModel::toggleAdvancedSettings,
+                        label = {
+                            Text(
+                                "\u2699 $countDisplay \u00D7 ${state.interval}s",
+                                maxLines = 1,
+                            )
+                        },
+                        leadingIcon = {
+                            Icon(
+                                Icons.Default.Settings,
+                                contentDescription = "Settings",
+                                modifier = Modifier.size(18.dp),
                             )
                         },
                     )
                 }
             }
+        }
 
-            // IP Info card
-            if (state.ipInfo.resolvedIp != null) {
-                item(key = "ipinfo") {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    IpInfoCard(ipInfo = state.ipInfo)
+        // Advanced settings panel
+        AnimatedVisibility(visible = state.showAdvancedSettings) {
+            AdvancedSettings(state, viewModel)
+        }
+
+        // === 3. Error card ===
+        state.error?.let { error ->
+            Spacer(modifier = Modifier.height(12.dp))
+            ErrorCard(error, onRetry = { viewModel.startPing() })
+        }
+
+        // === Scrollable bottom section ===
+        LazyColumn(
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+        ) {
+            // === 4. Dashboard card ===
+            if (state.results.isNotEmpty() || state.isRunning) {
+                item(key = "dashboard") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    DashboardCard(state)
                 }
             }
 
-            // Copy/Share buttons
+            // === 5. IP Info bar ===
+            if (state.ipInfo.resolvedIp != null) {
+                item(key = "ipinfo") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    IpInfoCard(
+                        ipInfo = state.ipInfo,
+                        collapsible = true,
+                        onCollapseReset = ipInfoCollapseReset,
+                    )
+                }
+            }
+
+            // === 6. Copy/Share buttons ===
             if (state.results.isNotEmpty()) {
                 item(key = "copy_share") {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
                     CopyShareButtons(
                         resultsText = state.results.joinToString("\n") { it.text },
                         context = context,
@@ -238,32 +261,204 @@ fun PingScreen(
                 }
             }
 
-            // Results list (inline items)
+            // === 7. Results list — in a Card ===
             if (state.results.isNotEmpty()) {
-                item(key = "results_header") {
-                    Spacer(modifier = Modifier.height(8.dp))
-                }
-                items(state.results, key = { "result_${it.sequenceNumber}" }) { result ->
-                    SelectionContainer {
-                        Text(
-                            text = result.text,
-                            fontFamily = FontFamily.Monospace,
-                            fontSize = 13.sp,
-                            color = if (result.isSuccess) {
-                                MaterialTheme.colorScheme.onBackground
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                            modifier = Modifier.padding(vertical = 2.dp),
-                        )
-                    }
+                item(key = "results_card") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    ResultsCard(state.results)
                 }
             }
         }
     }
+}
 
-    // Auto-scroll to bottom when new results arrive
-    // (handled via the LazyColumn containing everything in one list)
+@Composable
+private fun DashboardCard(state: PingScreenState) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+        ),
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            // Hero row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                // Left: large avg latency
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(
+                        text = state.stats.avgRtt?.let { "%.1f".format(it) } ?: "\u2014",
+                        style = HeroStatStyle,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "ms avg",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(bottom = 2.dp),
+                    )
+                }
+
+                // Right: status badge
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    shape = RoundedCornerShape(12.dp),
+                ) {
+                    Text(
+                        text = "${state.stats.packetsReceived}/${state.stats.packetsSent} \u2713",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
+
+            // Latency chart
+            if (state.results.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(8.dp))
+                LatencyChart(
+                    dataPoints = state.results.map { result ->
+                        LatencyDataPoint(
+                            sequenceNumber = result.sequenceNumber,
+                            rttMs = result.rttMs,
+                        )
+                    },
+                    collapsible = false,
+                )
+            }
+
+            // Divider between chart and stats
+            Spacer(modifier = Modifier.height(8.dp))
+            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Stats row
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .horizontalScroll(rememberScrollState()),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+            ) {
+                StatItem(
+                    label = "MIN",
+                    value = state.stats.minRtt?.let { "%.1f".format(it) } ?: "-",
+                    color = MaterialTheme.colorScheme.tertiary,
+                )
+                StatItem(
+                    label = "AVG",
+                    value = state.stats.avgRtt?.let { "%.1f".format(it) } ?: "-",
+                    color = MaterialTheme.colorScheme.primary,
+                )
+                StatItem(
+                    label = "MAX",
+                    value = state.stats.maxRtt?.let { "%.1f".format(it) } ?: "-",
+                    color = MaterialTheme.colorScheme.secondary,
+                )
+                StatItem(
+                    label = "LOSS",
+                    value = "%.1f%%".format(state.stats.packetLossPct),
+                    color = if (state.stats.packetLossPct == 0f) {
+                        LatencyGoodDark
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                )
+                StatItem(
+                    label = "JITTER",
+                    value = state.stats.jitter?.let { "%.1f".format(it) } ?: "-",
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                StatItem(
+                    label = "STDDEV",
+                    value = state.stats.stddevRtt?.let { "%.1f".format(it) } ?: "-",
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StatItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+    Column(
+        modifier = Modifier.padding(horizontal = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(
+            text = label,
+            style = StatsLabelStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Text(
+            text = value,
+            style = StatsValueStyle,
+            color = color,
+        )
+    }
+}
+
+@Composable
+private fun ResultsCard(results: List<PingResultDisplay>) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+    ) {
+        Column(modifier = Modifier.padding(8.dp)) {
+            results.forEachIndexed { index, result ->
+                SelectionContainer {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp, horizontal = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        // Sequence number
+                        Text(
+                            text = "#${result.sequenceNumber}",
+                            style = ResultRowStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(40.dp),
+                        )
+
+                        // TTL
+                        Text(
+                            text = result.ttl?.let { "ttl=$it" } ?: "",
+                            style = ResultRowStyle,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.weight(1f),
+                        )
+
+                        // RTT value
+                        Text(
+                            text = if (result.isSuccess && result.rttMs != null) {
+                                "%.1f ms".format(result.rttMs)
+                            } else {
+                                "timeout"
+                            },
+                            style = ResultRowStyle,
+                            color = if (result.isSuccess) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.error
+                            },
+                            textAlign = TextAlign.End,
+                        )
+                    }
+                }
+                if (index < results.size - 1) {
+                    HorizontalDivider(
+                        modifier = Modifier.padding(horizontal = 4.dp),
+                        color = MaterialTheme.colorScheme.outlineVariant,
+                    )
+                }
+            }
+        }
+    }
 }
 
 @Composable
@@ -302,7 +497,7 @@ private fun CopyShareButtons(
 
 @Composable
 private fun AdvancedSettings(state: PingScreenState, viewModel: PingViewModel) {
-    Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+    Column(modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -350,68 +545,11 @@ private fun AdvancedSettings(state: PingScreenState, viewModel: PingViewModel) {
 }
 
 @Composable
-private fun StatsCard(stats: PingStats) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant,
-        ),
-    ) {
-        Column(modifier = Modifier.padding(12.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                StatItem("Sent", stats.packetsSent.toString())
-                StatItem("Recv", stats.packetsReceived.toString())
-                StatItem("Loss", "%.1f%%".format(stats.packetLossPct))
-            }
-            Spacer(modifier = Modifier.height(8.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                StatItem("Min", stats.minRtt?.let { "%.1f ms".format(it) } ?: "-")
-                StatItem("Avg", stats.avgRtt?.let { "%.1f ms".format(it) } ?: "-")
-                StatItem("Max", stats.maxRtt?.let { "%.1f ms".format(it) } ?: "-")
-            }
-            Spacer(modifier = Modifier.height(4.dp))
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-            ) {
-                StatItem("StdDev", stats.stddevRtt?.let { "%.1f ms".format(it) } ?: "-")
-                StatItem("Jitter", stats.jitter?.let { "%.1f ms".format(it) } ?: "-")
-                Spacer(modifier = Modifier.weight(1f))
-            }
-        }
-    }
-}
-
-@Composable
-private fun StatItem(label: String, value: String) {
-    Column(
-        modifier = Modifier.width(80.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Text(
-            text = value,
-            style = MaterialTheme.typography.bodyMedium,
-            fontFamily = FontFamily.Monospace,
-        )
-    }
-}
-
-@Composable
 private fun ErrorCard(error: PingError, onRetry: () -> Unit) {
     val context = LocalContext.current
     Card(
         modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.errorContainer,
         ),

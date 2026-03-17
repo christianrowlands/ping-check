@@ -11,35 +11,48 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.platform.LocalContext
 
 private val DarkColorScheme = darkColorScheme(
-    primary = Green80,
+    primary = Cyan80,
+    onPrimary = CyanDark,
     secondary = Blue80,
-    tertiary = Orange80,
+    onSecondary = BlueDark,
+    tertiary = Amber80,
+    onTertiary = AmberDark,
     error = Red80,
+    onError = RedDark,
     background = Grey10,
+    onBackground = GreyE0,
     surface = Grey20,
+    onSurface = GreyE0,
 )
 
 private val LightColorScheme = lightColorScheme(
-    primary = Green40,
+    primary = Cyan40,
+    onPrimary = PureWhite,
     secondary = Blue40,
-    tertiary = Orange40,
+    onSecondary = PureWhite,
+    tertiary = Amber40,
+    onTertiary = PureWhite,
     error = Red40,
+    onError = PureWhite,
     background = Grey95,
+    onBackground = Grey10,
     surface = Grey90,
+    onSurface = Grey10,
 )
 
 private val HighContrastDarkColorScheme = darkColorScheme(
-    primary = HcGreen,
-    secondary = HcBlue,
-    tertiary = HcOrange,
-    error = HcRed,
-    background = PureBlack,
-    surface = HcSurface,
-    onBackground = PureWhite,
-    onSurface = PureWhite,
+    primary = HcCyan,
     onPrimary = PureBlack,
+    secondary = HcBlue,
     onSecondary = PureBlack,
+    tertiary = HcAmber,
+    onTertiary = PureBlack,
+    error = HcRed,
     onError = PureBlack,
+    background = PureBlack,
+    onBackground = PureWhite,
+    surface = HcSurface,
+    onSurface = PureWhite,
 )
 
 @Composable

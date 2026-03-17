@@ -37,4 +37,7 @@ interface TracerouteDao {
 
     @Query("DELETE FROM traceroute_sessions WHERE start_time < :beforeTimestamp")
     suspend fun deleteSessionsBefore(beforeTimestamp: Long)
+
+    @Query("SELECT is_timeout FROM traceroute_hops WHERE session_id = :sessionId ORDER BY hop_number ASC LIMIT :limit")
+    suspend fun getHopTimeoutFlags(sessionId: Long, limit: Int = 6): List<Boolean>
 }

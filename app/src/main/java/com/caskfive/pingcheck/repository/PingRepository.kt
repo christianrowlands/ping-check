@@ -62,4 +62,8 @@ class PingRepository @Inject constructor(
     suspend fun deleteSessionsBefore(beforeTimestamp: Long) {
         pingDao.deleteSessionsBefore(beforeTimestamp)
     }
+
+    suspend fun getRecentRttValues(sessionId: Long, limit: Int = 4): List<Float?> {
+        return pingDao.getRecentRttValues(sessionId, limit)
+    }
 }

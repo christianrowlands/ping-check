@@ -11,6 +11,8 @@ import com.caskfive.pingcheck.data.preferences.PreferencesManager
 import com.caskfive.pingcheck.repository.HistoryRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -19,8 +21,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
 enum class HistoryFilterType(val label: String) {
@@ -36,6 +40,8 @@ data class HistoryScreenState(
     val isLoading: Boolean = true,
     val detailItem: HistoryDetailState? = null,
     val csvExportContent: CsvExportData? = null,
+    val sparklineData: Map<String, List<Float>> = emptyMap(),
+    val hopPathData: Map<String, List<Boolean>> = emptyMap(),
 )
 
 // Data class to hold CSV export content ready for sharing
@@ -173,7 +179,45 @@ class HistoryViewModel @Inject constructor(
                 } else {
                     items
                 }
-                _state.update { it.copy(items = filtered, isLoading = false) }
+
+                // Fetch sparkline / hop path data for visible items
+                val sparklineMap = mutableMapOf<String, List<Float>>()
+                val hopPathMap = mutableMapOf<String, List<Boolean>>()
+
+                val deferreds = filtered.map { item ->
+                    val key = "${item.type}_${item.id}"
+                    async {
+                        when (item.type) {
+                            "ping" -> {
+                                val rttValues = historyRepository.getRecentRttValues(item.id, 4)
+                                val nonNull = rttValues.filterNotNull()
+                                if (nonNull.isNotEmpty()) {
+                                    synchronized(sparklineMap) {
+                                        sparklineMap[key] = nonNull.reversed()
+                                    }
+                                }
+                            }
+                            "traceroute" -> {
+                                val flags = historyRepository.getHopTimeoutFlags(item.id, 6)
+                                if (flags.isNotEmpty()) {
+                                    synchronized(hopPathMap) {
+                                        hopPathMap[key] = flags
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                deferreds.awaitAll()
+
+                _state.update {
+                    it.copy(
+                        items = filtered,
+                        isLoading = false,
+                        sparklineData = sparklineMap,
+                        hopPathData = hopPathMap,
+                    )
+                }
             }
         }
     }
@@ -185,6 +229,28 @@ class HistoryViewModel @Inject constructor(
             if (retentionDays > 0) {
                 val cutoff = System.currentTimeMillis() - (retentionDays.toLong() * 24 * 60 * 60 * 1000)
                 historyRepository.deleteSessionsBefore(cutoff)
+            }
+        }
+    }
+
+    companion object {
+        fun formatRelativeTimestamp(timestampMs: Long): String {
+            val now = System.currentTimeMillis()
+            val diffMs = now - timestampMs
+            val diffMinutes = TimeUnit.MILLISECONDS.toMinutes(diffMs)
+            val diffHours = TimeUnit.MILLISECONDS.toHours(diffMs)
+            val diffDays = TimeUnit.MILLISECONDS.toDays(diffMs)
+
+            return when {
+                diffMinutes < 1 -> "just now"
+                diffMinutes < 60 -> "$diffMinutes min ago"
+                diffHours < 24 -> "$diffHours hr ago"
+                diffDays < 7 -> "$diffDays days ago"
+                else -> {
+                    val cal = Calendar.getInstance().apply { timeInMillis = timestampMs }
+                    val monthFormat = SimpleDateFormat("MMM d", Locale.getDefault())
+                    monthFormat.format(cal.time)
+                }
             }
         }
     }
