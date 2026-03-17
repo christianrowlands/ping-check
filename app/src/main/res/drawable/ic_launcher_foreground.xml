@@ -5,54 +5,120 @@
     android:viewportWidth="108"
     android:viewportHeight="108">
 
-    <!-- Connecting lines from center node to each outer node -->
+    <!-- Zigzag path: outer glow -->
     <path
-        android:pathData="M54,54 L33,33"
-        android:strokeWidth="3"
-        android:strokeColor="#FFFFFF" />
-    <path
-        android:pathData="M54,54 L75,33"
-        android:strokeWidth="3"
-        android:strokeColor="#FFFFFF" />
-    <path
-        android:pathData="M54,54 L75,75"
-        android:strokeWidth="3"
-        android:strokeColor="#FFFFFF" />
-    <path
-        android:pathData="M54,54 L33,75"
-        android:strokeWidth="3"
-        android:strokeColor="#FFFFFF" />
-
-    <!-- Concentric ring around center node -->
-    <path
-        android:pathData="M29,54 A25,25 0 1,1 79,54 A25,25 0 1,1 29,54"
-        android:strokeWidth="2"
-        android:strokeColor="#4DFFFFFF"
+        android:pathData="M40,35 L68,46 L40,62 L68,73"
+        android:strokeWidth="14"
+        android:strokeColor="#0F4DD0E1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
         android:fillColor="@android:color/transparent" />
 
-    <!-- Center node -->
+    <!-- Zigzag path: inner glow -->
     <path
-        android:pathData="M42,54 A12,12 0 1,1 66,54 A12,12 0 1,1 42,54"
+        android:pathData="M40,35 L68,46 L40,62 L68,73"
+        android:strokeWidth="8"
+        android:strokeColor="#264DD0E1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Zigzag path: main stroke -->
+    <path
+        android:pathData="M40,35 L68,46 L40,62 L68,73"
+        android:strokeWidth="2.8"
+        android:strokeColor="#E0F7FA"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Origin node (top-left): outer halo -->
+    <path
+        android:pathData="M30,35 A10,10 0 1,1 50,35 A10,10 0 1,1 30,35"
+        android:fillColor="#0F4DD0E1" />
+
+    <!-- Origin node: inner halo -->
+    <path
+        android:pathData="M33,35 A7,7 0 1,1 47,35 A7,7 0 1,1 33,35"
+        android:fillColor="#1F4DD0E1" />
+
+    <!-- Origin node: core -->
+    <path
+        android:pathData="M35,35 A5,5 0 1,1 45,35 A5,5 0 1,1 35,35"
         android:fillColor="#FFFFFF" />
 
-    <!-- Outer node: top-left -->
+    <!-- Hop 1 (right): halo -->
     <path
-        android:pathData="M27,33 A6,6 0 1,1 39,33 A6,6 0 1,1 27,33"
+        android:pathData="M63,46 A5,5 0 1,1 73,46 A5,5 0 1,1 63,46"
+        android:fillColor="#1A4DD0E1" />
+
+    <!-- Hop 1: ring -->
+    <path
+        android:pathData="M64.5,46 A3.5,3.5 0 1,1 71.5,46 A3.5,3.5 0 1,1 64.5,46"
+        android:fillColor="#B2EBF2" />
+
+    <!-- Hop 1: core -->
+    <path
+        android:pathData="M66,46 A2,2 0 1,1 70,46 A2,2 0 1,1 66,46"
         android:fillColor="#FFFFFF" />
 
-    <!-- Outer node: top-right -->
+    <!-- Ping pulse (center): outer bloom -->
     <path
-        android:pathData="M69,33 A6,6 0 1,1 81,33 A6,6 0 1,1 69,33"
+        android:pathData="M44,54 A10,10 0 1,1 64,54 A10,10 0 1,1 44,54"
+        android:fillColor="#08FFFFFF" />
+
+    <!-- Ping pulse: inner bloom -->
+    <path
+        android:pathData="M47,54 A7,7 0 1,1 61,54 A7,7 0 1,1 47,54"
+        android:fillColor="#0FFFFFFF" />
+
+    <!-- Ping pulse: core -->
+    <path
+        android:pathData="M50,54 A4,4 0 1,1 58,54 A4,4 0 1,1 50,54"
+        android:fillColor="#F2FFFFFF" />
+
+    <!-- Ping pulse: signal ring 1 -->
+    <path
+        android:pathData="M40,54 A14,14 0 1,1 68,54 A14,14 0 1,1 40,54"
+        android:strokeWidth="1.2"
+        android:strokeColor="#1AFFFFFF"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Ping pulse: signal ring 2 -->
+    <path
+        android:pathData="M36,54 A18,18 0 1,1 72,54 A18,18 0 1,1 36,54"
+        android:strokeWidth="0.8"
+        android:strokeColor="#0FFFFFFF"
+        android:fillColor="@android:color/transparent" />
+
+    <!-- Hop 2 (left): halo -->
+    <path
+        android:pathData="M35,62 A5,5 0 1,1 45,62 A5,5 0 1,1 35,62"
+        android:fillColor="#1A4DD0E1" />
+
+    <!-- Hop 2: ring -->
+    <path
+        android:pathData="M36.5,62 A3.5,3.5 0 1,1 43.5,62 A3.5,3.5 0 1,1 36.5,62"
+        android:fillColor="#B2EBF2" />
+
+    <!-- Hop 2: core -->
+    <path
+        android:pathData="M38,62 A2,2 0 1,1 42,62 A2,2 0 1,1 38,62"
         android:fillColor="#FFFFFF" />
 
-    <!-- Outer node: bottom-right -->
+    <!-- Destination node (bottom-right): outer halo -->
     <path
-        android:pathData="M69,75 A6,6 0 1,1 81,75 A6,6 0 1,1 69,75"
-        android:fillColor="#FFFFFF" />
+        android:pathData="M58,73 A10,10 0 1,1 78,73 A10,10 0 1,1 58,73"
+        android:fillColor="#0F4DD0E1" />
 
-    <!-- Outer node: bottom-left -->
+    <!-- Destination node: inner halo -->
     <path
-        android:pathData="M27,75 A6,6 0 1,1 39,75 A6,6 0 1,1 27,75"
+        android:pathData="M61,73 A7,7 0 1,1 75,73 A7,7 0 1,1 61,73"
+        android:fillColor="#1F4DD0E1" />
+
+    <!-- Destination node: core -->
+    <path
+        android:pathData="M63,73 A5,5 0 1,1 73,73 A5,5 0 1,1 63,73"
         android:fillColor="#FFFFFF" />
 
 </vector>
