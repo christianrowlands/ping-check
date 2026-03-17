@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.graphics.Color
@@ -84,6 +85,7 @@ fun PingScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     var hasInteracted by remember { mutableStateOf(false) }
 
@@ -133,6 +135,7 @@ fun PingScreen(
                 ),
                 keyboardActions = KeyboardActions(
                     onGo = {
+                        keyboardController?.hide()
                         if (state.isRunning) viewModel.stopPing() else viewModel.startPing()
                     }
                 ),
@@ -159,7 +162,10 @@ fun PingScreen(
             Spacer(modifier = Modifier.width(8.dp))
 
             Button(
-                onClick = { if (state.isRunning) viewModel.stopPing() else viewModel.startPing() },
+                onClick = {
+                    keyboardController?.hide()
+                    if (state.isRunning) viewModel.stopPing() else viewModel.startPing()
+                },
                 modifier = Modifier.size(56.dp),
                 shape = RoundedCornerShape(8.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = buttonColor),
