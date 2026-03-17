@@ -7,7 +7,7 @@
 
   <!-- Background -->
   <g clip-path="url(#roundedSquare)">
-    <rect x="0" y="0" width="108" height="108" fill="#1C1C2A"/>
+    <rect x="0" y="0" width="108" height="108" fill="#191a1c"/>
 
     <!-- Foreground scaled up 1.35x from center (no safe zone needed for SVG) -->
     <g transform="translate(54,54) scale(1.35) translate(-54,-54)">

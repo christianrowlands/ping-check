@@ -30,15 +30,17 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Stop
-import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -76,6 +78,16 @@ fun TracerouteScreen(
 
     var hasInteracted by remember { mutableStateOf(false) }
 
+    // Animate button color between primary and error
+    val buttonColor by animateColorAsState(
+        targetValue = if (state.isRunning) {
+            MaterialTheme.colorScheme.error
+        } else {
+            MaterialTheme.colorScheme.primary
+        },
+        label = "startStopButtonColor",
+    )
+
     // Validation state
     val isValidationError = hasInteracted &&
             state.targetHost.isNotEmpty() &&
@@ -89,7 +101,7 @@ fun TracerouteScreen(
         // === 1. Input row — same pattern as Ping screen ===
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.Bottom,
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             OutlinedTextField(
@@ -104,11 +116,6 @@ fun TracerouteScreen(
                 singleLine = true,
                 enabled = !state.isRunning,
                 isError = isValidationError,
-                supportingText = if (isValidationError) {
-                    { Text("Invalid hostname or IP address") }
-                } else {
-                    null
-                },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Go,
@@ -118,16 +125,6 @@ fun TracerouteScreen(
                         if (!state.isRunning) viewModel.startTrace()
                     }
                 ),
-            )
-
-            // Start/Stop button with animated color
-            val buttonColor by animateColorAsState(
-                targetValue = if (state.isRunning) {
-                    MaterialTheme.colorScheme.error
-                } else {
-                    MaterialTheme.colorScheme.primary
-                },
-                label = "buttonColor",
             )
 
             Button(
@@ -144,13 +141,30 @@ fun TracerouteScreen(
             }
         }
 
+        if (isValidationError) {
+            Text(
+                text = "Invalid hostname or IP address",
+                color = MaterialTheme.colorScheme.error,
+                style = MaterialTheme.typography.bodySmall,
+                modifier = Modifier.padding(start = 16.dp),
+            )
+        }
+
         Spacer(modifier = Modifier.height(12.dp))
 
         // === 2. Settings chip ===
-        AssistChip(
+        FilterChip(
+            selected = state.showSettings,
             onClick = viewModel::toggleSettings,
             label = {
-                Text("\u2699 ${state.maxHops} hops \u00B7 ${state.timeout}s timeout")
+                Text("${state.maxHops} hops \u00B7 ${state.timeout}s timeout")
+            },
+            leadingIcon = {
+                Icon(
+                    if (state.showSettings) Icons.Default.Check else Icons.Default.Settings,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
             },
         )
 
@@ -292,7 +306,7 @@ private fun HopPathList(
         modifier = modifier,
     ) {
         items(hops, key = { it.hopNumber }) { hop ->
-            val isLastHop = hop == hops.last()
+            val isLastHop = hop.hopNumber == hops.last().hopNumber
             SelectionContainer {
                 HopPathRow(
                     hop = hop,

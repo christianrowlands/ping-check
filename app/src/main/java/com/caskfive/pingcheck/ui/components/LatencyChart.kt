@@ -1,5 +1,6 @@
 package com.caskfive.pingcheck.ui.components
 
+import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -30,9 +31,12 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.compose.cartesian.AutoScrollCondition
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
+import com.patrykandpatrick.vico.compose.cartesian.Scroll
 import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
 import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
 import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
@@ -40,6 +44,7 @@ import com.patrykandpatrick.vico.compose.cartesian.data.lineSeries
 import com.patrykandpatrick.vico.compose.cartesian.layer.LineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberLineCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.common.Fill
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.debounce
@@ -96,13 +101,20 @@ fun LatencyChart(
  */
 @Composable
 private fun LatencyStatsLegend(dataPoints: List<LatencyDataPoint>) {
-    val rtts = dataPoints.mapNotNull { it.rttMs }
-    if (rtts.isEmpty()) return
+    data class LegendStats(val min: Float, val avg: Float, val max: Float, val lossCount: Int)
 
-    val minRtt = rtts.min()
-    val avgRtt = rtts.sum() / rtts.size
-    val maxRtt = rtts.max()
-    val lossCount = dataPoints.count { it.rttMs == null }
+    val stats = remember(dataPoints) {
+        val rtts = dataPoints.mapNotNull { it.rttMs }
+        if (rtts.isEmpty()) null
+        else LegendStats(
+            min = rtts.min(),
+            avg = rtts.sum() / rtts.size,
+            max = rtts.max(),
+            lossCount = dataPoints.count { it.rttMs == null },
+        )
+    } ?: return
+
+    val errorColor = MaterialTheme.colorScheme.error
 
     Row(
         modifier = Modifier
@@ -110,11 +122,11 @@ private fun LatencyStatsLegend(dataPoints: List<LatencyDataPoint>) {
             .padding(horizontal = 16.dp, vertical = 4.dp),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        LegendItem(label = "Min", value = "${"%.1f".format(minRtt)} ms", color = MaterialTheme.colorScheme.tertiary)
-        LegendItem(label = "Avg", value = "${"%.1f".format(avgRtt)} ms", color = MaterialTheme.colorScheme.primary)
-        LegendItem(label = "Max", value = "${"%.1f".format(maxRtt)} ms", color = MaterialTheme.colorScheme.secondary)
-        if (lossCount > 0) {
-            LegendItem(label = "Loss", value = "$lossCount pkt", color = Color.Red)
+        LegendItem(label = "Min", value = "${"%.1f".format(stats.min)} ms", color = MaterialTheme.colorScheme.tertiary)
+        LegendItem(label = "Avg", value = "${"%.1f".format(stats.avg)} ms", color = MaterialTheme.colorScheme.primary)
+        LegendItem(label = "Max", value = "${"%.1f".format(stats.max)} ms", color = MaterialTheme.colorScheme.secondary)
+        if (stats.lossCount > 0) {
+            LegendItem(label = "Loss", value = "${stats.lossCount} pkt", color = errorColor)
         }
     }
 }
@@ -149,6 +161,9 @@ private fun LatencyChartContent(
     dataPoints: List<LatencyDataPoint>,
     maxDisplayPoints: Int,
 ) {
+    val configuration = LocalConfiguration.current
+    val chartHeight = if (configuration.orientation == Configuration.ORIENTATION_LANDSCAPE) 120.dp else 200.dp
+
     val modelProducer = remember { CartesianChartModelProducer() }
 
     val chartColor = MaterialTheme.colorScheme.primary
@@ -181,6 +196,12 @@ private fun LatencyChartContent(
             }
     }
 
+    val scrollState = rememberVicoScrollState(
+        initialScroll = Scroll.Absolute.End,
+        autoScroll = Scroll.Absolute.End,
+        autoScrollCondition = AutoScrollCondition.OnModelGrowth,
+    )
+
     CartesianChartHost(
         chart = rememberCartesianChart(
             rememberLineCartesianLayer(
@@ -197,8 +218,9 @@ private fun LatencyChartContent(
             bottomAxis = HorizontalAxis.rememberBottom(),
         ),
         modelProducer = modelProducer,
+        scrollState = scrollState,
         modifier = Modifier
             .fillMaxWidth()
-            .height(200.dp),
+            .height(chartHeight),
     )
 }

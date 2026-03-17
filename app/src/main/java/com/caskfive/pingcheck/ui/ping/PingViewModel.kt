@@ -78,10 +78,10 @@ data class PingStats(
 )
 
 sealed class PingError(val message: String) {
-    class DnsFailure(host: String) : PingError("Could not resolve $host")
-    class NoNetwork : PingError("No network connection")
-    class NoPingBinary : PingError("Ping not available on this device")
-    class General(msg: String) : PingError(msg)
+    data class DnsFailure(val host: String) : PingError("Could not resolve $host")
+    data object NoNetwork : PingError("No network connection")
+    data object NoPingBinary : PingError("Ping not available on this device")
+    data class General(val msg: String) : PingError(msg)
 }
 
 @HiltViewModel
@@ -105,6 +105,10 @@ class PingViewModel @Inject constructor(
     private val resultBatch = mutableListOf<PingResultEntity>()
 
     private var lastRtt: Float? = null
+
+    // Running accumulators for O(1) incremental stats
+    private var rttSum: Double = 0.0
+    private var rttSumOfSquares: Double = 0.0
 
     init {
         viewModelScope.launch {
@@ -262,6 +266,8 @@ class PingViewModel @Inject constructor(
         }
 
         lastRtt = null
+        rttSum = 0.0
+        rttSumOfSquares = 0.0
         viewModelScope.launch {
             resultBatchMutex.withLock { resultBatch.clear() }
         }
@@ -382,7 +388,7 @@ class PingViewModel @Inject constructor(
 
                 _state.update { state ->
                     val newResults = state.results + display
-                    val stats = computeStats(newResults, jitter, state.stats)
+                    val stats = computeStatsIncremental(event.rttMs, jitter, state.stats)
                     state.copy(results = newResults, stats = stats)
                 }
 
@@ -459,8 +465,8 @@ class PingViewModel @Inject constructor(
 
             is PingEvent.Error -> {
                 val error = when {
-                    event.message.contains("not available") -> PingError.NoPingBinary()
-                    event.message.contains("network", ignoreCase = true) -> PingError.NoNetwork()
+                    event.message.contains("not available") -> PingError.NoPingBinary
+                    event.message.contains("network", ignoreCase = true) -> PingError.NoNetwork
                     else -> PingError.General(event.message)
                 }
                 _state.update {
@@ -470,23 +476,30 @@ class PingViewModel @Inject constructor(
         }
     }
 
-    private fun computeStats(
-        results: List<PingResultDisplay>,
+    /**
+     * O(1) incremental stats update for each successful packet.
+     * Uses running accumulators (rttSum, rttSumOfSquares) instead of
+     * iterating the full results list on every packet.
+     */
+    private fun computeStatsIncremental(
+        newRtt: Float,
         latestJitter: Float?,
         currentStats: PingStats,
     ): PingStats {
-        val successful = results.filter { it.isSuccess }
-        val sent = results.size
-        val received = successful.size
-        val lossPct = if (sent > 0) ((sent - received).toFloat() / sent) * 100f else 0f
+        val sent = currentStats.packetsSent + 1
+        val received = currentStats.packetsReceived + 1
+        val lossPct = ((sent - received).toFloat() / sent) * 100f
 
-        val rtts = successful.mapNotNull { it.rttMs }
-        val min = rtts.minOrNull()
-        val max = rtts.maxOrNull()
-        val avg = if (rtts.isNotEmpty()) rtts.sum() / rtts.size else null
-        val stddev = if (rtts.size > 1 && avg != null) {
-            val variance = rtts.map { (it - avg) * (it - avg) }.sum() / rtts.size
-            kotlin.math.sqrt(variance)
+        rttSum += newRtt.toDouble()
+        rttSumOfSquares += newRtt.toDouble() * newRtt.toDouble()
+
+        val newMin = currentStats.minRtt?.let { minOf(it, newRtt) } ?: newRtt
+        val newMax = currentStats.maxRtt?.let { maxOf(it, newRtt) } ?: newRtt
+        val newAvg = (rttSum / received).toFloat()
+        val newStddev = if (received > 1) {
+            val mean = rttSum / received
+            val variance = (rttSumOfSquares / received) - (mean * mean)
+            if (variance > 0) kotlin.math.sqrt(variance).toFloat() else 0f
         } else null
 
         // Running jitter: use exponential moving average
@@ -499,10 +512,10 @@ class PingViewModel @Inject constructor(
             packetsSent = sent,
             packetsReceived = received,
             packetLossPct = lossPct,
-            minRtt = min,
-            avgRtt = avg,
-            maxRtt = max,
-            stddevRtt = stddev,
+            minRtt = newMin,
+            avgRtt = newAvg,
+            maxRtt = newMax,
+            stddevRtt = newStddev,
             jitter = jitter,
         )
     }

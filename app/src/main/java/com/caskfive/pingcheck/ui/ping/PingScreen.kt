@@ -7,8 +7,10 @@ import android.content.Intent
 import android.provider.Settings
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.foundation.background
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -21,12 +23,14 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Settings
@@ -40,6 +44,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -49,7 +54,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -59,6 +63,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -82,15 +87,8 @@ fun PingScreen(
 
     var hasInteracted by remember { mutableStateOf(false) }
 
-    // Track when a new ping starts for IpInfoCard collapse reset
-    var ipInfoCollapseReset by remember { mutableStateOf(false) }
-    LaunchedEffect(state.results.isEmpty() && state.isRunning) {
-        if (state.results.isEmpty() && state.isRunning) {
-            ipInfoCollapseReset = true
-        } else {
-            ipInfoCollapseReset = false
-        }
-    }
+    // Reset IpInfoCard collapse when a new ping starts (results cleared + running)
+    val ipInfoCollapseReset = state.results.isEmpty() && state.isRunning
 
     // Validation state
     val isValidationError = hasInteracted &&
@@ -107,15 +105,16 @@ fun PingScreen(
         label = "startStopButtonColor",
     )
 
-    Column(
+    LazyColumn(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
     ) {
         // === 1. Input row — host field + Start/Stop button side-by-side ===
+        item(key = "input_row") {
         Row(
             modifier = Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.Top,
+            verticalAlignment = Alignment.Bottom,
         ) {
             OutlinedTextField(
                 value = state.targetHost,
@@ -128,11 +127,6 @@ fun PingScreen(
                 placeholder = { Text("8.8.8.8 or google.com") },
                 singleLine = true,
                 isError = isValidationError,
-                supportingText = if (isValidationError) {
-                    { Text("Invalid hostname or IP address") }
-                } else {
-                    null
-                },
                 keyboardOptions = KeyboardOptions(
                     keyboardType = KeyboardType.Uri,
                     imeAction = ImeAction.Go,
@@ -177,12 +171,26 @@ fun PingScreen(
                 )
             }
         }
+        }
+
+        if (isValidationError) {
+            item(key = "validation_error") {
+                Text(
+                    text = "Invalid hostname or IP address",
+                    color = MaterialTheme.colorScheme.error,
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(start = 16.dp),
+                )
+            }
+        }
 
         // === 2. Favorites + Settings chips row ===
         if (state.favorites.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(4.dp))
+            item(key = "favorites") {
             LazyRow(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(top = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 items(state.favorites) { fav ->
@@ -191,50 +199,61 @@ fun PingScreen(
                         label = { Text(fav.displayName ?: fav.host, maxLines = 1) },
                     )
                 }
+                item(key = "settings_divider") {
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(MaterialTheme.colorScheme.outlineVariant),
+                    )
+                }
                 item(key = "settings_chip") {
                     val countDisplay = if (state.count == 0) "\u221E" else state.count.toString()
-                    AssistChip(
+                    FilterChip(
+                        selected = state.showAdvancedSettings,
                         onClick = viewModel::toggleAdvancedSettings,
                         label = {
                             Text(
-                                "\u2699 $countDisplay \u00D7 ${state.interval}s",
+                                "$countDisplay \u00D7 ${state.interval}s",
                                 maxLines = 1,
                             )
                         },
                         leadingIcon = {
                             Icon(
-                                Icons.Default.Settings,
-                                contentDescription = "Settings",
+                                if (state.showAdvancedSettings) Icons.Default.Check else Icons.Default.Settings,
+                                contentDescription = null,
                                 modifier = Modifier.size(18.dp),
                             )
                         },
                     )
                 }
             }
+            }
         }
 
         // Advanced settings panel
-        AnimatedVisibility(visible = state.showAdvancedSettings) {
-            AdvancedSettings(state, viewModel)
+        item(key = "advanced_settings") {
+            AnimatedVisibility(visible = state.showAdvancedSettings) {
+                AdvancedSettings(state, viewModel)
+            }
         }
 
         // === 3. Error card ===
         state.error?.let { error ->
-            Spacer(modifier = Modifier.height(12.dp))
-            ErrorCard(error, onRetry = { viewModel.startPing() })
+            item(key = "error") {
+                Spacer(modifier = Modifier.height(12.dp))
+                ErrorCard(error, onRetry = { viewModel.startPing() })
+            }
         }
 
-        // === Scrollable bottom section ===
-        LazyColumn(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth(),
-        ) {
             // === 4. Dashboard card ===
             if (state.results.isNotEmpty() || state.isRunning) {
                 item(key = "dashboard") {
                     Spacer(modifier = Modifier.height(12.dp))
-                    DashboardCard(state)
+                    DashboardCard(
+                        results = state.results,
+                        stats = state.stats,
+                    )
                 }
             }
 
@@ -261,19 +280,49 @@ fun PingScreen(
                 }
             }
 
-            // === 7. Results list — in a Card ===
+            // === 7. Results list — virtualized as individual items ===
             if (state.results.isNotEmpty()) {
-                item(key = "results_card") {
+                item(key = "results_spacer") {
                     Spacer(modifier = Modifier.height(12.dp))
-                    ResultsCard(state.results)
+                }
+                itemsIndexed(
+                    items = state.results,
+                    key = { _, result -> result.sequenceNumber },
+                ) { index, result ->
+                    PingResultRow(result = result, showTopDivider = index > 0)
                 }
             }
-        }
+            if (state.isRunning && state.ipInfo.resolvedIp != null) {
+                item(key = "results_waiting") {
+                    if (state.results.isEmpty()) {
+                        Spacer(modifier = Modifier.height(12.dp))
+                    } else {
+                        HorizontalDivider(
+                            modifier = Modifier.padding(horizontal = 4.dp),
+                            color = MaterialTheme.colorScheme.outlineVariant,
+                        )
+                    }
+                    WaitingRow(
+                        nextSequence = state.results.lastOrNull()?.sequenceNumber?.plus(1) ?: 1,
+                    )
+                }
+            }
+
+            // === Completion summary ===
+            if (!state.isRunning && state.results.isNotEmpty()) {
+                item(key = "completion_summary") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    CompletionSummaryCard(state.stats)
+                }
+            }
     }
 }
 
 @Composable
-private fun DashboardCard(state: PingScreenState) {
+private fun DashboardCard(
+    results: List<PingResultDisplay>,
+    stats: PingStats,
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
@@ -289,52 +338,78 @@ private fun DashboardCard(state: PingScreenState) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 // Left: large avg latency
+                val isAllLoss = stats.avgRtt == null && stats.packetsSent > 0
                 Row(verticalAlignment = Alignment.Bottom) {
                     Text(
-                        text = state.stats.avgRtt?.let { "%.1f".format(it) } ?: "\u2014",
+                        text = if (isAllLoss) "No response" else stats.avgRtt?.let { "%.1f".format(it) } ?: "\u2014",
                         style = HeroStatStyle,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = if (isAllLoss) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "ms avg",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(bottom = 2.dp),
-                    )
+                    if (!isAllLoss) {
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text(
+                            text = "ms avg",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(bottom = 2.dp),
+                        )
+                    }
                 }
 
-                // Right: status badge
-                Surface(
-                    color = MaterialTheme.colorScheme.primaryContainer,
-                    shape = RoundedCornerShape(12.dp),
-                ) {
-                    Text(
-                        text = "${state.stats.packetsReceived}/${state.stats.packetsSent} \u2713",
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
+                // Right: status badge (only show when packets have been sent)
+                if (stats.packetsSent > 0) {
+                    val badgeColor = when {
+                        stats.packetsReceived == 0 ->
+                            MaterialTheme.colorScheme.errorContainer
+                        stats.packetLossPct > 0f ->
+                            MaterialTheme.colorScheme.tertiaryContainer
+                        else ->
+                            MaterialTheme.colorScheme.primaryContainer
+                    }
+                    val badgeContentColor = when {
+                        stats.packetsReceived == 0 ->
+                            MaterialTheme.colorScheme.onErrorContainer
+                        stats.packetLossPct > 0f ->
+                            MaterialTheme.colorScheme.onTertiaryContainer
+                        else ->
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                    }
+                    val badgeSymbol = if (stats.packetsReceived == 0) "\u2717" else "\u2713"
+
+                    Surface(
+                        color = badgeColor,
+                        shape = RoundedCornerShape(12.dp),
+                    ) {
+                        Text(
+                            text = "${stats.packetsReceived}/${stats.packetsSent} $badgeSymbol",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = badgeContentColor,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                        )
+                    }
                 }
             }
 
-            // Latency chart
-            if (state.results.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(8.dp))
-                LatencyChart(
-                    dataPoints = state.results.map { result ->
+            // Latency chart (memoize data point mapping)
+            if (results.isNotEmpty()) {
+                val chartDataPoints = remember(results) {
+                    results.map { result ->
                         LatencyDataPoint(
                             sequenceNumber = result.sequenceNumber,
                             rttMs = result.rttMs,
                         )
-                    },
+                    }
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                LatencyChart(
+                    dataPoints = chartDataPoints,
                     collapsible = false,
                 )
             }
 
             // Divider between chart and stats
             Spacer(modifier = Modifier.height(8.dp))
-            HorizontalDivider(color = MaterialTheme.colorScheme.surfaceVariant)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             Spacer(modifier = Modifier.height(8.dp))
 
             // Stats row
@@ -346,23 +421,23 @@ private fun DashboardCard(state: PingScreenState) {
             ) {
                 StatItem(
                     label = "MIN",
-                    value = state.stats.minRtt?.let { "%.1f".format(it) } ?: "-",
+                    value = stats.minRtt?.let { "%.1f".format(it) } ?: "-",
                     color = MaterialTheme.colorScheme.tertiary,
                 )
                 StatItem(
                     label = "AVG",
-                    value = state.stats.avgRtt?.let { "%.1f".format(it) } ?: "-",
+                    value = stats.avgRtt?.let { "%.1f".format(it) } ?: "-",
                     color = MaterialTheme.colorScheme.primary,
                 )
                 StatItem(
                     label = "MAX",
-                    value = state.stats.maxRtt?.let { "%.1f".format(it) } ?: "-",
+                    value = stats.maxRtt?.let { "%.1f".format(it) } ?: "-",
                     color = MaterialTheme.colorScheme.secondary,
                 )
                 StatItem(
                     label = "LOSS",
-                    value = "%.1f%%".format(state.stats.packetLossPct),
-                    color = if (state.stats.packetLossPct == 0f) {
+                    value = if (stats.packetsSent > 0) "%.1f%%".format(stats.packetLossPct) else "-",
+                    color = if (stats.packetLossPct == 0f || stats.packetsSent == 0) {
                         LatencyGoodDark
                     } else {
                         MaterialTheme.colorScheme.error
@@ -370,12 +445,12 @@ private fun DashboardCard(state: PingScreenState) {
                 )
                 StatItem(
                     label = "JITTER",
-                    value = state.stats.jitter?.let { "%.1f".format(it) } ?: "-",
+                    value = stats.jitter?.let { "%.1f".format(it) } ?: "-",
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 StatItem(
                     label = "STDDEV",
-                    value = state.stats.stddevRtt?.let { "%.1f".format(it) } ?: "-",
+                    value = stats.stddevRtt?.let { "%.1f".format(it) } ?: "-",
                     color = MaterialTheme.colorScheme.onSurface,
                 )
             }
@@ -384,7 +459,7 @@ private fun DashboardCard(state: PingScreenState) {
 }
 
 @Composable
-private fun StatItem(label: String, value: String, color: androidx.compose.ui.graphics.Color) {
+private fun StatItem(label: String, value: String, color: Color) {
     Column(
         modifier = Modifier.padding(horizontal = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -403,61 +478,115 @@ private fun StatItem(label: String, value: String, color: androidx.compose.ui.gr
 }
 
 @Composable
-private fun ResultsCard(results: List<PingResultDisplay>) {
+private fun PingResultRow(result: PingResultDisplay, showTopDivider: Boolean) {
+    Column {
+        if (showTopDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(horizontal = 4.dp),
+                color = MaterialTheme.colorScheme.outlineVariant,
+            )
+        }
+        SelectionContainer {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 4.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = "#${result.sequenceNumber}",
+                    style = ResultRowStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.width(40.dp),
+                )
+                Text(
+                    text = result.ttl?.let { "ttl=$it" } ?: "",
+                    style = ResultRowStyle,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.weight(1f),
+                )
+                Text(
+                    text = if (result.isSuccess && result.rttMs != null) {
+                        "%.1f ms".format(result.rttMs)
+                    } else {
+                        "timeout"
+                    },
+                    style = ResultRowStyle,
+                    color = if (result.isSuccess) {
+                        MaterialTheme.colorScheme.primary
+                    } else {
+                        MaterialTheme.colorScheme.error
+                    },
+                    textAlign = TextAlign.End,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun WaitingRow(nextSequence: Int) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp, horizontal = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "#$nextSequence",
+            style = ResultRowStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.width(40.dp),
+        )
+        Spacer(modifier = Modifier.weight(1f))
+        CircularProgressIndicator(
+            modifier = Modifier.size(14.dp),
+            strokeWidth = 2.dp,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(modifier = Modifier.width(6.dp))
+        Text(
+            text = "waiting...",
+            style = ResultRowStyle,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+    }
+}
+
+@Composable
+private fun CompletionSummaryCard(stats: PingStats) {
+    val isAllLoss = stats.packetsReceived == 0 && stats.packetsSent > 0
+    val isHighLoss = stats.packetLossPct > 50f && !isAllLoss
+
+    if (!isAllLoss && !isHighLoss) return
+
+    val containerColor = if (isAllLoss) {
+        MaterialTheme.colorScheme.errorContainer
+    } else {
+        MaterialTheme.colorScheme.tertiaryContainer
+    }
+    val contentColor = if (isAllLoss) {
+        MaterialTheme.colorScheme.onErrorContainer
+    } else {
+        MaterialTheme.colorScheme.onTertiaryContainer
+    }
+    val message = if (isAllLoss) {
+        "Host unreachable \u2014 all ${stats.packetsSent} packets lost. The host may be down, blocking ICMP, or behind a firewall."
+    } else {
+        "High packet loss (${"%.1f".format(stats.packetLossPct)}%). The connection may be unstable."
+    }
+
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = containerColor),
     ) {
-        Column(modifier = Modifier.padding(8.dp)) {
-            results.forEachIndexed { index, result ->
-                SelectionContainer {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp, horizontal = 4.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        // Sequence number
-                        Text(
-                            text = "#${result.sequenceNumber}",
-                            style = ResultRowStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.width(40.dp),
-                        )
-
-                        // TTL
-                        Text(
-                            text = result.ttl?.let { "ttl=$it" } ?: "",
-                            style = ResultRowStyle,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.weight(1f),
-                        )
-
-                        // RTT value
-                        Text(
-                            text = if (result.isSuccess && result.rttMs != null) {
-                                "%.1f ms".format(result.rttMs)
-                            } else {
-                                "timeout"
-                            },
-                            style = ResultRowStyle,
-                            color = if (result.isSuccess) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.error
-                            },
-                            textAlign = TextAlign.End,
-                        )
-                    }
-                }
-                if (index < results.size - 1) {
-                    HorizontalDivider(
-                        modifier = Modifier.padding(horizontal = 4.dp),
-                        color = MaterialTheme.colorScheme.outlineVariant,
-                    )
-                }
-            }
-        }
+        Text(
+            text = message,
+            color = contentColor,
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(12.dp),
+        )
     }
 }
 
@@ -563,7 +692,7 @@ private fun ErrorCard(error: PingError, onRetry: () -> Unit) {
 
             // Error-specific guidance
             when (error) {
-                is PingError.NoNetwork -> {
+                PingError.NoNetwork -> {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "Check your Wi-Fi or mobile data connection.",
@@ -588,7 +717,7 @@ private fun ErrorCard(error: PingError, onRetry: () -> Unit) {
                     )
                 }
 
-                is PingError.NoPingBinary -> {
+                PingError.NoPingBinary -> {
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = "The ping binary is not available on this device. This can happen on some manufacturer-customized Android builds. Try restarting the app or device.",
