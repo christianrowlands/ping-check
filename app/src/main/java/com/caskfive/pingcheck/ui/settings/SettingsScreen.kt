@@ -21,10 +21,10 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -63,14 +63,13 @@ fun SettingsScreen(
     ) {
         // Theme Section
         SectionHeader("Appearance")
+        Spacer(modifier = Modifier.height(8.dp))
         ThemeSelector(
             currentMode = state.themeMode,
             onModeSelected = viewModel::updateThemeMode,
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
 
         // Default Ping Parameters
         SectionHeader("Default Ping Parameters")
@@ -120,8 +119,6 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
 
         // History Retention
         SectionHeader("History")
@@ -132,8 +129,6 @@ fun SettingsScreen(
         )
 
         Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
 
         // Public IP Lookup — disabled until HTTP call is implemented
         SectionHeader("Network")
@@ -143,10 +138,26 @@ fun SettingsScreen(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = "Public IP Lookup (Coming soon)",
-                    style = MaterialTheme.typography.bodyLarge,
-                )
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = "Public IP Lookup",
+                        style = MaterialTheme.typography.bodyLarge,
+                    )
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Text(
+                            text = "Coming soon",
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
+                    }
+                }
                 Text(
                     text = "When enabled, queries an external service to display your public IP address. This sends a single HTTPS request to a third-party API.",
                     style = MaterialTheme.typography.bodySmall,
@@ -164,8 +175,6 @@ fun SettingsScreen(
         }
 
         Spacer(modifier = Modifier.height(24.dp))
-        HorizontalDivider()
-        Spacer(modifier = Modifier.height(16.dp))
 
         // About Section
         SectionHeader("About")
@@ -234,8 +243,6 @@ private fun ThemeSelector(
     )
     var expanded by remember { mutableStateOf(false) }
     val currentLabel = options.firstOrNull { it.first == currentMode }?.second ?: "System"
-
-    Spacer(modifier = Modifier.height(8.dp))
 
     ExposedDropdownMenuBox(
         expanded = expanded,
