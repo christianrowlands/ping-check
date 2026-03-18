@@ -1,16 +1,24 @@
 # PingCheck
 
-A simple Android app for ping and traceroute.
+A simple, privacy-focused Android ping utility. No data leaves your device except ping packets and DNS lookups.
+
+[<img src="https://play.google.com/intl/en_us/badges/static/images/badges/en_badge_web_generic.png"
+      alt="Get it on Google Play"
+      width="250">](https://play.google.com/store/apps/details?id=com.caskfive.pingcheck)
+
+<p align="center">
+  <img src="screenshots/PingCheck_Ping.png" alt="Ping" width="230"/>
+  <img src="screenshots/PingCheck_History.png" alt="History" width="230"/>
+  <img src="screenshots/PingCheck_Settings.png" alt="Settings" width="230"/>
+</p>
 
 ## Features
 
 - **Ping** — Execute pings with configurable count, interval, packet size, and timeout
-- **Traceroute** — Trace network path to any destination via incremental TTL
-- **Continuous Ping** — Run indefinite pings via a foreground service
-- **Latency Charts** — Visualize ping latency over time
+- **Latency Charts** — Visualize ping latency over time with min, avg, max, loss, jitter, and stddev stats
 - **Geolocation** — Country, ASN, and org info via bundled MaxMind GeoLite2 databases
 - **Favorites** — Save hosts with custom display names and per-host settings
-- **History** — Browse and manage past ping and traceroute sessions
+- **History** — Browse and search past ping sessions
 - **IPv4 & IPv6** — Automatic protocol detection
 
 ## Tech Stack

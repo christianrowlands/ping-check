@@ -58,7 +58,7 @@ class SettingsViewModel @Inject constructor(
 
     fun updateDefaultCount(count: Int) {
         viewModelScope.launch {
-            preferencesManager.updateDefaultCount(count)
+            preferencesManager.updateDefaultCount(count.coerceAtLeast(1))
         }
     }
 
