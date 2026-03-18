@@ -47,6 +47,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import com.caskfive.pingcheck.ui.components.NumericTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -527,23 +528,19 @@ private fun TracerouteSettings(state: TracerouteScreenState, viewModel: Tracerou
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = state.maxHops.toString(),
-                onValueChange = { viewModel.onMaxHopsChanged(it.toIntOrNull() ?: 30) },
+            NumericTextField(
+                value = state.maxHops,
+                onValueChange = viewModel::onMaxHopsChanged,
                 modifier = Modifier.weight(1f),
                 label = { Text("Max Hops") },
-                singleLine = true,
                 enabled = !state.isRunning,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            OutlinedTextField(
-                value = state.timeout.toString(),
-                onValueChange = { viewModel.onTimeoutChanged(it.toIntOrNull() ?: 3) },
+            NumericTextField(
+                value = state.timeout,
+                onValueChange = viewModel::onTimeoutChanged,
                 modifier = Modifier.weight(1f),
                 label = { Text("Timeout (s)") },
-                singleLine = true,
                 enabled = !state.isRunning,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
         }
     }

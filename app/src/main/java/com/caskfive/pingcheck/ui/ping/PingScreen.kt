@@ -70,6 +70,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.caskfive.pingcheck.ui.components.NumericTextField
 import com.caskfive.pingcheck.ui.components.IpInfoCard
 import com.caskfive.pingcheck.ui.components.LatencyChart
 import com.caskfive.pingcheck.ui.components.LatencyDataPoint
@@ -642,21 +643,17 @@ private fun AdvancedSettings(state: PingScreenState, viewModel: PingViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = state.count.toString(),
-                onValueChange = { viewModel.onCountChanged(it.toIntOrNull() ?: 4) },
+            NumericTextField(
+                value = state.count,
+                onValueChange = viewModel::onCountChanged,
                 modifier = Modifier.weight(1f),
                 label = { Text("Count") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            OutlinedTextField(
-                value = state.interval.toString(),
-                onValueChange = { viewModel.onIntervalChanged(it.toFloatOrNull() ?: 1.0f) },
+            NumericTextField(
+                value = state.interval,
+                onValueChange = viewModel::onIntervalChanged,
                 modifier = Modifier.weight(1f),
                 label = { Text("Interval (s)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -664,21 +661,17 @@ private fun AdvancedSettings(state: PingScreenState, viewModel: PingViewModel) {
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = state.packetSize.toString(),
-                onValueChange = { viewModel.onPacketSizeChanged(it.toIntOrNull() ?: 56) },
+            NumericTextField(
+                value = state.packetSize,
+                onValueChange = viewModel::onPacketSizeChanged,
                 modifier = Modifier.weight(1f),
                 label = { Text("Size (bytes)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            OutlinedTextField(
-                value = state.timeout.toString(),
-                onValueChange = { viewModel.onTimeoutChanged(it.toIntOrNull() ?: 10) },
+            NumericTextField(
+                value = state.timeout,
+                onValueChange = viewModel::onTimeoutChanged,
                 modifier = Modifier.weight(1f),
                 label = { Text("Timeout (s)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
         }
     }

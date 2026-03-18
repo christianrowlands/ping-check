@@ -20,6 +20,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -109,14 +110,17 @@ class PingViewModel @Inject constructor(
 
     init {
         viewModelScope.launch {
-            val prefs = preferencesManager.preferences.first()
-            _state.update {
-                it.copy(
-                    count = prefs.defaultCount.coerceAtLeast(1),
-                    interval = prefs.defaultInterval,
-                    packetSize = prefs.defaultPacketSize,
-                    timeout = prefs.defaultTimeout,
-                )
+            preferencesManager.preferences.collectLatest { prefs ->
+                if (!_state.value.isRunning) {
+                    _state.update {
+                        it.copy(
+                            count = prefs.defaultCount.coerceAtLeast(1),
+                            interval = prefs.defaultInterval,
+                            packetSize = prefs.defaultPacketSize,
+                            timeout = prefs.defaultTimeout,
+                        )
+                    }
+                }
             }
         }
         // Observe favorites

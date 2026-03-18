@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
@@ -25,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuAnchorType
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
+import com.caskfive.pingcheck.ui.components.NumericTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -78,21 +77,17 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = state.defaultCount.toString(),
-                onValueChange = { viewModel.updateDefaultCount(it.toIntOrNull() ?: 4) },
+            NumericTextField(
+                value = state.defaultCount,
+                onValueChange = viewModel::updateDefaultCount,
                 modifier = Modifier.weight(1f),
                 label = { Text("Count") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            OutlinedTextField(
-                value = state.defaultInterval.toString(),
-                onValueChange = { viewModel.updateDefaultInterval(it.toFloatOrNull() ?: 1.0f) },
+            NumericTextField(
+                value = state.defaultInterval,
+                onValueChange = viewModel::updateDefaultInterval,
                 modifier = Modifier.weight(1f),
                 label = { Text("Interval (s)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             )
         }
         Spacer(modifier = Modifier.height(8.dp))
@@ -100,21 +95,17 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            OutlinedTextField(
-                value = state.defaultPacketSize.toString(),
-                onValueChange = { viewModel.updateDefaultPacketSize(it.toIntOrNull() ?: 56) },
+            NumericTextField(
+                value = state.defaultPacketSize,
+                onValueChange = viewModel::updateDefaultPacketSize,
                 modifier = Modifier.weight(1f),
                 label = { Text("Packet Size (B)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
-            OutlinedTextField(
-                value = state.defaultTimeout.toString(),
-                onValueChange = { viewModel.updateDefaultTimeout(it.toIntOrNull() ?: 10) },
+            NumericTextField(
+                value = state.defaultTimeout,
+                onValueChange = viewModel::updateDefaultTimeout,
                 modifier = Modifier.weight(1f),
                 label = { Text("Timeout (s)") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             )
         }
 
