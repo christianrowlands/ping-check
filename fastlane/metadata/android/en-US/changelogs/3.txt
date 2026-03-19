@@ -1,0 +1,5 @@
+Bug fixes and improvements.
+
+- Fix settings not syncing to the Ping tab
+- Fix numeric fields not being editable in settings
+- Fix status bar icons and latency chart theming
