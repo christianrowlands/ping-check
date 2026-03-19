@@ -25,6 +25,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
+import com.patrykandpatrick.vico.compose.m3.common.rememberM3VicoTheme
+import com.patrykandpatrick.vico.compose.common.ProvideVicoTheme
 import com.patrykandpatrick.vico.compose.cartesian.AutoScrollCondition
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.Scroll
@@ -135,34 +137,36 @@ private fun LatencyChartContent(
         autoScrollCondition = AutoScrollCondition.OnModelGrowth,
     )
 
-    CartesianChartHost(
-        chart = rememberCartesianChart(
-            rememberLineCartesianLayer(
-                lineProvider = LineCartesianLayer.LineProvider.series(
-                    LineCartesianLayer.rememberLine(
-                        fill = LineCartesianLayer.LineFill.single(Fill(chartColor)),
-                        areaFill = LineCartesianLayer.AreaFill.single(
-                            Fill(chartColor.copy(alpha = 0.15f))
-                        ),
-                        pointProvider = if (showPoints) {
-                            LineCartesianLayer.PointProvider.single(
-                                LineCartesianLayer.Point(
-                                    rememberShapeComponent(Fill(chartColor), CircleShape)
+    ProvideVicoTheme(rememberM3VicoTheme()) {
+        CartesianChartHost(
+            chart = rememberCartesianChart(
+                rememberLineCartesianLayer(
+                    lineProvider = LineCartesianLayer.LineProvider.series(
+                        LineCartesianLayer.rememberLine(
+                            fill = LineCartesianLayer.LineFill.single(Fill(chartColor)),
+                            areaFill = LineCartesianLayer.AreaFill.single(
+                                Fill(chartColor.copy(alpha = 0.15f))
+                            ),
+                            pointProvider = if (showPoints) {
+                                LineCartesianLayer.PointProvider.single(
+                                    LineCartesianLayer.Point(
+                                        rememberShapeComponent(Fill(chartColor), CircleShape)
+                                    )
                                 )
-                            )
-                        } else {
-                            null
-                        },
+                            } else {
+                                null
+                            },
+                        )
                     )
-                )
+                ),
+                startAxis = VerticalAxis.rememberStart(),
+                bottomAxis = HorizontalAxis.rememberBottom(),
             ),
-            startAxis = VerticalAxis.rememberStart(),
-            bottomAxis = HorizontalAxis.rememberBottom(),
-        ),
-        modelProducer = modelProducer,
-        scrollState = scrollState,
-        modifier = Modifier
-            .fillMaxWidth()
-            .height(chartHeight),
-    )
+            modelProducer = modelProducer,
+            scrollState = scrollState,
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(chartHeight),
+        )
+    }
 }
