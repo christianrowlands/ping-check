@@ -1,0 +1,7 @@
+Initial release of PingCheck.
+
+- Ping with configurable count, interval, packet size, and timeout
+- Latency charts with min, avg, max, loss, jitter, and stddev
+- Favorites with custom display names and per-host settings
+- Ping history with search
+- IPv4 and IPv6 support

@@ -16,7 +16,6 @@ A simple, privacy-focused Android ping utility. No data leaves your device excep
 
 - **Ping** — Execute pings with configurable count, interval, packet size, and timeout
 - **Latency Charts** — Visualize ping latency over time with min, avg, max, loss, jitter, and stddev stats
-- **Geolocation** — Country, ASN, and org info via bundled MaxMind GeoLite2 databases
 - **Favorites** — Save hosts with custom display names and per-host settings
 - **History** — Browse and search past ping sessions
 - **IPv4 & IPv6** — Automatic protocol detection

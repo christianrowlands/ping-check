@@ -89,7 +89,7 @@ jobs:
       - name: Create GitHub Release
         uses: ncipollo/release-action@v1
         with:
-          draft: true
+          draft: false
           generateReleaseNotes: true
           artifacts: artifacts/apk/*.apk
 

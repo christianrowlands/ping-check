@@ -1,0 +1,14 @@
+<p><i>PingCheck</i> is a simple, privacy-focused ping utility for Android. No data leaves your device except ping packets and DNS lookups.</p>
+
+<p><b>Features:</b></p>
+<ul>
+<li><b>Ping</b> — Execute pings with configurable count, interval, packet size, and timeout</li>
+<li><b>Latency Charts</b> — Visualize ping latency over time with min, avg, max, loss, jitter, and stddev stats</li>
+<li><b>Favorites</b> — Save hosts with custom display names and per-host settings</li>
+<li><b>History</b> — Browse and search past ping sessions</li>
+<li><b>IPv4 &amp; IPv6</b> — Automatic protocol detection</li>
+</ul>
+
+<p>PingCheck is free and open source software licensed under GPLv3. No ads, no tracking, no account required.</p>
+
+<p>Source code: <a href="https://github.com/caskfive/ping-check">https://github.com/caskfive/ping-check</a></p>
