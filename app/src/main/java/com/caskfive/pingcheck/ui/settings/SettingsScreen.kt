@@ -34,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -43,6 +44,12 @@ fun SettingsScreen(
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val context = LocalContext.current
+    val versionName = remember {
+        context.packageManager
+            .getPackageInfo(context.packageName, 0)
+            .versionName ?: "unknown"
+    }
 
     if (state.isLoading) {
         Box(
@@ -187,7 +194,7 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        text = "v1.0.0",
+                        text = "v$versionName",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
