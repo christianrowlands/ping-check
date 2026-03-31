@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2](https://github.com/christianrowlands/ping-check/releases/tag/v1.2) - 2026-03-31
+
+**IMPROVEMENTS**
+* Remove the ACCESS_WIFI_STATE permission.
+
 ## [1.1](https://github.com/christianrowlands/ping-check/releases/tag/v1.1) - 2026-03-19
 
 **BUG FIXES**
